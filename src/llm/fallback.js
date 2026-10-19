@@ -3,6 +3,8 @@
 // Token pembicara: 'A' | 'B' | divisionId | agentId | 'hr' | 'any'
 // ============================================================
 
+import { choice } from '../core/utils.js';
+
 // ---------------- Percakapan berpasangan ----------------
 
 export const PAIR_TEMPLATES = [
@@ -364,4 +366,68 @@ export function scriptKpiReminder() {
     { by: 'hrd', text: 'Bagi yang belum, jangan sampai kami kirim email pribadi ya dear :)))' },
     { by: 'any', text: 'Yaaampun KPI. Ini bulan kayaknya baru kemarin ngisi.' },
   ];
+}
+
+// ============================================================
+// Proyek: bank fallback konten paket
+// ============================================================
+
+const PROJECT_SECTION_VARIANTS = {
+  it: [
+    { title: 'Rencana Teknis & Stack', text: 'Kami pakai stack yang paling cepat jadi tapi tetap keren: Vite untuk bundling, runtime ringan, dan SQLite untuk data lokal. Arsitektur dipisah rapi supaya tidak jadi utang teknis di minggu pertama. Kalau ada revisi, tinggal tambah sprint kecil.' },
+    { title: 'Implementasi & Struktur Kode', text: 'Struktur folder sudah disiapkan: modul utama, data, dan UI dipisah. CRUD standar jalan dulu, fitur keren menyusul sprint 2. Baca README untuk cara menjalankan, lalu kabari kami kalau ada error.' },
+  ],
+  marketing: [
+    { title: 'Kampanye & Poster', text: 'Poster utama sudah digarap dengan warna korporat yang berani. Headline-nya singkat, biar jempol Direktur tidak capek membaca. Caption siap tempel ke semua platform, tinggal pasang di jam prime time.' },
+    { title: 'Rencana Promosi', text: 'Kami siapkan poster, caption, dan hashtag biar proyek ini viral minimal di grup keluarga. Call to action-nya jelas: coba, pakai, lalu pamer ke teman kantor. Konten video menyusul di fase berikutnya.' },
+  ],
+  finance: [
+    { title: 'Anggaran', text: 'Estimasi biaya disusun konservatif dengan margin keamanan gaya kantor. Semua item masuk akal, kecuali item "kopi tim", yang tetap kami pertahankan demi moral. Detail per baris ada di anggaran.csv.' },
+    { title: 'Realisasi & Kontrol Biaya', text: 'Anggaran kami rapikan, angka dibulatkan biar enak dibaca. Kalau ada tagihan tak terduga, mekanismenya sudah ada: ajukan, tunggu, ingat-ingat sendiri. Prioritaskan kebutuhan, bukan keinginan.' },
+  ],
+  hrd: [
+    { title: 'Dukungan SDM', text: 'Tim yang terlibat sudah didata dan diberi semangat plus jadwal. Kami tekankan istirahat cukup, walau realitanya deadline tetap jalan. Memo resmi sudah terbit agar semuanya terdokumentasi rapi.' },
+    { title: 'Tim & Kesejahteraan', text: 'Kami pastikan beban kerja dibagi rata, minimal di atas kertas. Ketrampilan tim dipetakan supaya penugasan tidak menumpuk di satu orang saja. Evaluasi ringan akan dilakukan setelah proyek selesai.' },
+  ],
+  ga: [
+    { title: 'Logistik & Fasilitas', text: 'Peralatan, ruangan, dan kursi sudah dicek satu per satu. Stapler yang hilang sudah dicari tanpa hasil, laporannya ada di checklist. Semua kebutuhan sarana proyek tercatat rapi.' },
+    { title: 'Operasional', text: 'GA memastikan listrik, meja, dan printer dalam kondisi siap perang. Kabel sudah dirapikan demi keselamatan. Bila ada kebutuhan mendadak, kirim pesan, jangan diam-diam meminjam kursi lantai lain.' },
+  ],
+};
+
+export function projectContentFallback(project) {
+  const title = String(project?.title || 'Proyek');
+  const order = ['it', 'marketing', 'finance', 'hrd', 'ga'];
+  const sections = order.map((division) => {
+    const variant = choice(PROJECT_SECTION_VARIANTS[division]);
+    return { division, title: variant.title, text: variant.text };
+  });
+  const headline = title.length <= 24 ? title : `${title.slice(0, 23).trim()}…`;
+  return {
+    sections,
+    poster: {
+      headline,
+      tagline: 'Paket kerja lengkap, rapi, dan siap dipakai.',
+      hashtags: ['#PixelSinergi', '#KerjaKerjaKerja', '#SiapPakai'],
+    },
+    caption: `Proyek "${title}" resmi dikerjakan seluruh divisi PT Pixel Sinergi Nusantara. Laporan, anggaran, sampai kodenya sudah kami siapkan. Tinggal dipakai, pak!`,
+    budget: [
+      { item: 'Konsumsi tim & rapat koordinasi', qty: 3, unit: 'hari', price: 250000, note: 'termasuk kopi' },
+      { item: 'Perangkat kerja tambahan', qty: 2, unit: 'unit', price: 750000, note: 'mouse bekas masih layak' },
+      { item: 'Cetak & material poster', qty: 1, unit: 'paket', price: 300000, note: 'warna, jangan hitam putih' },
+      { item: 'Langganan tools pendukung', qty: 2, unit: 'bulan', price: 150000, note: 'diskon tim' },
+      { item: 'Dana darurat revisi', qty: 1, unit: 'paket', price: 400000, note: 'biasanya kepakai' },
+    ],
+    ga: [
+      { category: 'Ruang', item: 'Ruang kerja tim proyek', qty: 1, owner: 'Joko', status: 'siap' },
+      { category: 'Peralatan', item: 'Laptop & perangkat pendukung', qty: 3, owner: 'Joko', status: 'siap' },
+      { category: 'Jaringan', item: 'Akses WiFi prioritas', qty: 1, owner: 'Bayu', status: 'proses' },
+      { category: 'Konsumsi', item: 'Stok kopi & camilan', qty: 5, owner: 'Joko', status: 'siap' },
+    ],
+    memo: {
+      subject: `Dukungan SDM untuk proyek "${title}"`,
+      body: 'Sehubungan dengan tugas proyek dari Bapak Direktur, seluruh karyawan diharapkan mendukung penuh pelaksanaannya sesuai peran divisi masing-masing. Beban kerja diatur agar tetap manusiawi. Kerja sama dan komunikasi yang baik adalah kunci.',
+      closing: 'Demikian disampaikan. Salam hangat, tetap semangat, dan jangan lupa istirahat.',
+    },
+  };
 }

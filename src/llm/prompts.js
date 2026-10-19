@@ -4,6 +4,7 @@
 // ============================================================
 
 import { formatGameTime } from '../core/utils.js';
+import { AGENT_DEFS } from '../agents/roster.js';
 
 const LEVEL_NAMES = {
   1: 'Junior/Staff',
@@ -211,4 +212,100 @@ export function matchSpeaker(candidates, name) {
     if (short === n || n.includes(short)) return a;
   }
   return null;
+}
+
+// ============================================================
+// Proyek: prompt & parser (paket deliverable)
+// ============================================================
+
+function extractJson(raw) {
+  const text = String(raw || '');
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = fence ? fence[1] : text;
+  const start = candidate.indexOf('{');
+  const end = candidate.lastIndexOf('}');
+  if (start === -1 || end <= start) return null;
+  try {
+    const data = JSON.parse(candidate.slice(start, end + 1));
+    return data && typeof data === 'object' && !Array.isArray(data) ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+export function buildProjectContentPrompt(sim, project) {
+  const agentLines = AGENT_DEFS.filter((d) => !d.isStatic)
+    .map((d) => `- ${d.name} | ${d.role} | Divisi ${DIVISION_NAMES[d.division] || d.division} | Gaya: ${d.style} | Sifat: ${d.traits.join(', ')}`)
+    .join('\n');
+
+  return [
+    { role: 'system', content: systemHeader() },
+    {
+      role: 'user',
+      content: [
+        `Titah proyek dari Direktur: "${project.title}"`,
+        `Hari ${sim.clock.day}, jam ${formatGameTime(sim.clock.timeMin)}.`,
+        sim.flags?.coffeeBudgetCut ? 'Catatan kantor: anggaran kopi sedang dipotong 50%.' : '',
+        '',
+        'Karyawan yang terlibat:',
+        agentLines,
+        '',
+        'Susun paket kerja proyek. SEMUA 5 divisi ikut menyumbang bagiannya (gaya kantor: semua ikut campur).',
+        'Bahasa Indonesia, boleh satir kantor, tapi deliverable tetap masuk akal dan bisa dipakai.',
+        'Balas HANYA JSON valid dengan bentuk:',
+        '{',
+        '  "sections": [ {"division":"it|marketing|finance|hrd|ga","title":"<=60 char","text":"2-4 kalimat"} ],',
+        '  "poster": { "headline":"<=24 char","tagline":"<=60 char","hashtags":["#tag1","#tag2","#tag3"] },',
+        '  "caption": "<=240 char",',
+        '  "budget": [ {"item":"...","qty":2,"unit":"pcs","price":150000,"note":"..."} ],',
+        '  "ga": [ {"category":"...","item":"...","qty":1,"owner":"Joko","status":"siap"} ],',
+        '  "memo": { "subject":"<=80 char","body":"<=400 char","closing":"<=120 char" }',
+        '}',
+        'Aturan: sections wajib 5 item (satu per divisi). budget 4-8 baris angka realistis rupiah (tanpa titik ribuan). ga 4-8 baris.',
+      ].filter(Boolean).join('\n'),
+    },
+  ];
+}
+
+export function buildProjectCodePrompt(sim, project) {
+  return [
+    {
+      role: 'system',
+      content: `${systemHeader()} Kamu juga senior software engineer Divisi IT & Engineering; kamu menulis kode proyek yang diminta Direktur.`,
+    },
+    {
+      role: 'user',
+      content: [
+        `Brief proyek: "${project.title}"`,
+        '',
+        'Buat kode proyek LENGKAP dan runnable sesuai brief (bukan website mini kalau brief meminta aplikasi desktop).',
+        'Stack: pilih paling cocok dengan brief (mis. Tauri 2 + Rust + SQLite + vanilla JS + Vite untuk aplikasi desktop; Vite + vanilla JS untuk web).',
+        'Skema database: SQLite bila aplikasi butuh data. Manajemen paket: Bun.',
+        'Batas: maksimal 14 file, tiap file <=24 KB, total <=160 KB, kedalaman folder <=4.',
+        'Wajib sertakan README.md berisi langkah menjalankan (pakai bun). Sertakan file konfigurasi yang diperlukan.',
+        'Jangan pernah menulis kode yang menghapus file, mengakses jaringan misterius, atau menjalankan perintah berbahaya.',
+        'Balas HANYA JSON valid dengan bentuk:',
+        '{',
+        '  "stack": "deskripsi singkat stack",',
+        '  "run": ["bun install","bun run tauri dev"],',
+        '  "files": [ {"path":"package.json","content":"..."} ]',
+        '}',
+        'Isi "content" adalah isi file apa adanya (boleh multi-baris, escape JSON dengan benar).',
+      ].join('\n'),
+    },
+  ];
+}
+
+export function parseProjectContent(raw) {
+  return extractJson(raw);
+}
+
+export function parseProjectCode(raw) {
+  const data = extractJson(raw);
+  if (!data || !Array.isArray(data.files)) return null;
+  return {
+    stack: typeof data.stack === 'string' ? data.stack.slice(0, 120) : '',
+    run: Array.isArray(data.run) ? data.run.filter((c) => typeof c === 'string').slice(0, 6) : [],
+    files: data.files,
+  };
 }
