@@ -215,6 +215,38 @@ interface SaveState {
 }
 ```
 
+## 10. Project (Tugas Proyek)
+
+```ts
+interface ProjectFile { relPath: string; kind: 'text' | 'binary'; bytes: number; status: 'pending' | 'saved' | 'downloaded' | 'failed'; warn: boolean }
+
+interface Project {
+  id: string;
+  title: string;                 // brief dari Direktur (≤160 char)
+  day: number;
+  startedAtMin: number;          // menit kantor saat mulai
+  durationMin: number;           // 20–40
+  elapsedMin: number;            // progres berjalan
+  milestones: Record<'it'|'marketing'|'finance'|'hrd'|'ga', { done: boolean; atPct: number }>;
+  status: 'running' | 'done' | 'late';
+  content: object | null;        // sections[5], poster, caption, budget[], ga[], memo
+  contentSource: 'llm' | 'mixed' | 'template' | null;
+  code: { stack: string; run: string[]; files: { path: string; content: string; bytes: number; warn: boolean }[]; fallback: boolean; dropped: number } | null;
+  source: 'llm' | 'mixed' | 'template' | null;   // gabungan konten + kode
+  posterDataUrl: string | null;  // PNG dataURL 1080²
+  iconDataUrl: string | null;    // PNG dataURL 512²
+  files: ProjectFile[];          // manifest paket (8 item + kode/**)
+  textFiles: { relPath: string; content: string }[];
+  folderName: string;            // <YYYY-MM-DD> - Hari <n> - <slug>
+  folderPath: string | null;     // null di mode browser
+  finishedAtMin: number | null;
+}
+```
+
+- Feed channel: `proyek` (mulai, 5 tonggak, selesai).
+- Stats: `stats.projects` (total) dan `stats.projectsToday[]` (judul; direset setelah laporan harian dibuat).
+- Laporan harian: `counters.projects` + `projectsList[]`.
+
 ---
 
 ## Aturan Validasi Penting

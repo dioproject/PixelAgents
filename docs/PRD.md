@@ -99,6 +99,12 @@ Dunia kerja kantor Indonesia penuh dengan dinamika unik: obrolan pantry, drama r
 - Kecepatan 1x/2x/4x/8x/16x + Pause.
 - Jam game + hari ditampilkan di HUD.
 
+### US-09 — Tugas Proyek & Paket Deliverable
+> Sebagai Direktur, saya ingin mengirim satu brief proyek lalu melihat seluruh divisi mengerjakannya, dan menerima paket file nyata di disk yang bisa dibuka dan ditindaklanjuti.
+
+**Acceptance:**
+- 1 proyek aktif; progres 20–40 menit kantor; 5 tonggak feed; paket 8 item + README dijamin; tersimpan otomatis di `Documents\PixelSinergi`; badge sumber LLM/Template; fallback offline selalu siap; proyek kehabisan hari diselesaikan "dikejar deadline" (status `late`).
+
 ## 5. Metrik Keberhasilan
 
 | Metrik | Target |

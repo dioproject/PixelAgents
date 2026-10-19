@@ -19,6 +19,7 @@ Dibangun dengan **Tauri 2 (Rust) + Vite + Vanilla JS** — ringan (RAM < 100 MB)
 | 📺 **God Mode Dashboard** | CCTV pan/zoom, Live Office Feed, inspeksi profil karyawan, statistik kantor. |
 | 📜 **Titah Direksi** | Rapat dadakan, potong budget kopi, pizza party, batik day, atau perintah custom — karyawan bereaksi formal ke kamu, lalu bergosip setelahnya. |
 | 🚨 **Insiden Korporat** | Keceplosan typo ke bos (auto SP dari HRD!), perang AC, reimburse ditolak, printer rusak, KPI deadline. |
+| 📋 **Tugas Proyek & Paket Deliverable** | Kirim brief bebas (mis. aplikasi desktop Tauri); semua divisi bekerja, lalu paket file nyata (laporan, poster, CSV, kode) tersimpan otomatis di `Documents\PixelSinergi`. |
 | 🔌 **LLM Fleksibel** | Dukung 9router, OpenRouter, Groq, OpenAI, Ollama, atau endpoint custom apa pun (format OpenAI-compatible). |
 | 🌐 **Mode Offline** | Tanpa API key? Simulasi tetap hidup dengan bank dialog procedural. |
 
@@ -73,6 +74,17 @@ Buka **⚙️ Settings** di aplikasi, lalu isi:
 > ✅ **Semua endpoint dengan format OpenAI-compatible** (`POST /chat/completions`) didukung.
 > 🔁 Klik **Test Koneksi** untuk memastikan endpoint hidup.
 > 🕹️ Aktifkan **Mode Offline** untuk memaksa simulasi memakai dialog procedural (tanpa internet).
+
+### 📋 Tugas Proyek (Titah → paket deliverable)
+
+- Kirim titah **📋 Tugas Proyek Baru** dengan brief bebas (mis. "Buat aplikasi desktop Tauri + Rust + SQLite + vanilla JS + Vite").
+- Semua divisi kelihatan mengerjakan; 5 tonggak muncul di Live Office Feed.
+- Setelah ±20–40 menit kantor, paket tersimpan otomatis di
+  `Documents\PixelSinergi\<tanggal> - Hari <n> - <slug>\`: `laporan.md`, `poster.png`, `ikon-app.png`,
+  `caption-sosmed.txt`, `anggaran.csv`, `memo-sdm.md`, `checklist-ga.csv`, dan `kode/` (kode proyek sesuai brief).
+- Tombol **📁 Buka Folder**, **💾 Simpan Ulang**, **📋 Copy Laporan/Caption**, dan arsip proyek ada di modal hasil / panel statistik.
+- Tanpa LLM (offline / endpoint error) paket tetap terbit memakai template; badge sumber di modal menunjukkan asalnya.
+- Aplikasi **tidak pernah** menjalankan atau meng-compile kode hasil AI — buka README di folder `kode/` lalu jalankan manual.
 
 ---
 

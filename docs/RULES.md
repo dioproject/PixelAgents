@@ -109,6 +109,7 @@ Sistem melempar dadu setiap **20 menit game** (55% chance) pada pukul **09:15–
 | **Pizza Party Jam 3!** | Flag `pizzaPartyActive`; semua agen menuju pantry party; mood +25 | Sorak-sorai formal + rencana ambil 2 slice |
 | **Batik Day Besok** | Flag `batikNext` + `batikActive`; semua agen langsung berganti pakaian batik dan tetap memakainya sampai sehari penuh berikutnya, lalu kembali normal | HRD antusias; sisanya "oke Pak" sambil cek lemari |
 | **Bebas Ngapain Aja Seharian** | Flag `freeDay`; planner memilih aktivitas santai (pantry/lounge) | Senang, tapi curiga ini jebakan |
+| **Tugas Proyek Baru** | Brief bebas → `ProjectManager.start`: 1 proyek aktif, semua agen fokus kerja, progres 20–40 menit kantor, 5 tonggak divisi di feed `proyek`, lalu paket file nyata disimpan ke `Documents\PixelSinergi` | Menerima brief sebagai prioritas; hasil dibahas di modal + arsip |
 | **Custom** | Teks bebas → respons formal dari divisi terpilih; tidak mengubah stat secara langsung | 2–4 respons formal (HRD/IT/Marketing/Finance) + gosip lanjutan |
 
 **Aturan respons titah:**
@@ -121,3 +122,14 @@ Sistem melempar dadu setiap **20 menit game** (55% chance) pada pukul **09:15–
 - Tidak ada ujaran kebencian, SARA, atau pelecehan nyata.
 - "SP" dan "teguran" selalu bernada satir ringan, bukan mengancam nyata.
 - Semua karakter fiktif; kesamaan nama dengan rekan kerja sungguhan adalah kebetulan statistik murni. 😉
+
+## 9. Tugas Proyek (Titah Khusus)
+
+- **Satu proyek aktif** pada satu waktu; brief ditolak (toast) bila proyek lain masih berjalan.
+- Durasi **20–40 menit kantor** (random); tonggak divisi di **20% / 36% / 52% / 68% / 84%** → 5 entri feed channel `proyek`.
+- Selama proyek aktif: agen fokus kerja (label `Fokus proyek: …`), peluang trip kopi **×0.5**, kunjungan lintas divisi **nonaktif**.
+- **Blok pulang (17:00–18:00) tidak berlaku** selama proyek aktif — semua tetap di meja.
+- Rollover 18:00 saat proyek belum selesai → proyek diselesaikan "dikejar deadline": status `late`, konten template, disclaimer di `laporan.md`; tetap dihitung di statistik hari itu.
+- Batas paket kode: **14 file · 24 KB/file · 160 KB total · kedalaman 4**; ekstensi whitelist; `README.md` selalu dijamin.
+- Aplikasi **tidak pernah mengeksekusi/meng-compile** kode hasil AI — hanya menulis file ke disk.
+- Mode bebas (titah `bebas`) menang atas fokus proyek (disengaja).

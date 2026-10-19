@@ -73,6 +73,11 @@
 | `agents/conversation` | Orkestrasi percakapan: pilih pasangan, susun turn (LLM/fallback), jadwalkan bubble + feed, lepas agen | Menyentuh canvas |
 | `agents/incidents` | Timer & roll insiden acak, membangun skrip insiden (atau LLM), efek stats/toast | Menggerakkan agen langsung (delegasi ke agent/behavior) |
 | `agents/directives` | Preset titah, efek simulasi (gather/stat/flag), panggil conversation untuk reaksi | — |
+| `agents/projects` | Orkestrasi Tugas Proyek: state 1 aktif, progres + tonggak, konten & kode (LLM/fallback), poster, simpan paket, arsip | Menjalankan/meng-compile kode hasil AI |
+| `artifacts/files` | Builder teks murni: `laporan.md`, CSV (BOM `;`), caption, memo | DOM/network |
+| `artifacts/code` + `artifacts/templates` | Sanitasi & normalisasi file kode (14 file · 24 KB · 160 KB · depth 4) + scaffold fallback valid | Mengeksekusi kode |
+| `artifacts/poster` | Render poster 1080² & ikon 512² ke PNG dataURL (canvas) | Menyimpan file |
+| `src-tauri/src/lib.rs` | Command Rust: `llm_chat` (proxy CORS), `save_config`/`load_config`, `save_project_package` (sanitasi + tulis paket ke Documents), `open_path` | Logika bisnis JS |
 | `llm/client` | `chat()` (Tauri invoke atau fetch), antrian 1 in-flight, timeout, `testConnection()` | Tahu konteks bisnis |
 | `llm/prompts` | Builder system prompt + few-shot + parser JSON multi-speaker | Network |
 | `llm/fallback` | Bank dialog procedural (template percakapan, reaksi, insiden) | Network |
@@ -172,8 +177,9 @@ PixelAgents/
 │  ├─ core/   {config, clock, bus, utils}.js
 │  ├─ engine/ {camera, pathfinding, sprites, loop}.js
 │  ├─ world/  {office, tiles, furnitureArt, scene}.js
-│  ├─ agents/ {roster, agent, behavior, conversation, incidents, directives}.js
+│  ├─ agents/ {roster, agent, behavior, conversation, incidents, directives, projects}.js
 │  ├─ llm/    {client, prompts, fallback}.js
+│  ├─ artifacts/ {files, code, templates, poster}.js
 │  └─ ui/     {hud, feed, bubbles, inspector, modals, toast, sfx}.js
 └─ src-tauri/
    ├─ Cargo.toml · build.rs · tauri.conf.json
@@ -193,3 +199,27 @@ bun run tauri build    # produksi → installer .msi/.exe
 
 - `beforeDevCommand: bun run dev`, `devUrl: http://localhost:1420`
 - CSP nonaktif (konten 100% lokal); network hanya lewat Rust command.
+
+## 10. Alur Tugas Proyek (Paket Deliverable)
+
+```
+Titah "Tugas Proyek Baru" (brief) → DirectiveSystem.send('proyek', text)
+  → ProjectManager.start(): 1 proyek aktif; semua agen difokuskan (behavior)
+  → update(gameMinutes): progres + 5 tonggak divisi (feed `proyek`)
+  → pct 100% → complete():
+       A) generateContent : prompt LLM (maxTokens 2000) → parseProjectContent
+                            → mergeProjectContent(parsed, bank fallback)
+       B) generateCode    : prompt LLM (maxTokens 8000) → parseProjectCode
+                            → normalizeCodeFiles (14 file / 24 KB / 160 KB / depth 4)
+                            → fallback template + README dijamin
+       → renderPoster / renderAppIcon (canvas → PNG dataURL)
+       → savePackage: Tauri invoke `save_project_package` → Documents\PixelSinergi\<folder>
+                      (browser dev: unduhan terpisah, folderPath = null)
+  → arsip + auto-buka modal hasil (hanya bila tidak ada modal lain terbuka)
+
+Rollover 18:00 saat proyek masih jalan → finalizeLate():
+  statistik hari itu dihitung sinkron → complete({ late: true })
+  → konten & kode template + status 'late' + disclaimer di laporan.md
+
+Batas aman: aplikasi TIDAK PERNAH mengeksekusi/meng-compile kode hasil AI — hanya menulis file.
+```
