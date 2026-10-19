@@ -96,9 +96,12 @@ export class Behavior {
       case 'arrival':
       case 'work1':
       case 'work2':
-      case 'capek':
-        this.goWork(agent, WORK_LABELS[block] || 'Bekerja');
+      case 'capek': {
+        const proj = sim.projects?.active;
+        if (proj) this.goWork(agent, `Fokus proyek: ${proj.title}`);
+        else this.goWork(agent, WORK_LABELS[block] || 'Bekerja');
         break;
+      }
       case 'lunch':
         this.goPantry(agent, 'Makan siang', 'lunch');
         break;
@@ -106,8 +109,11 @@ export class Behavior {
         this.goPantry(agent, 'Coffee break sore', 'break');
         break;
       case 'home': {
+        const proj = sim.projects?.active;
         const lembur = ['it', 'ga'].includes(agent.def.division);
-        if (sim.flags.overtime) {
+        if (proj) {
+          this.goWork(agent, `Fokus proyek: ${proj.title}`);
+        } else if (sim.flags.overtime) {
           this.goWork(agent, 'Lembur (semua divisi)');
         } else if (lembur && !sim.flags.allGoHome) {
           this.goWork(agent, 'Lembur (pura-pura semangat)');
@@ -183,7 +189,7 @@ export class Behavior {
     if (working && ['work1', 'work2', 'capek'].includes(block)) {
       const nextOk = this._tripCooldown.get(agent.id) || 0;
       if (nowMin >= nextOk && agent.stats.coffee < 1.6) {
-        const p = gameMinutes * 0.02;
+        const p = gameMinutes * 0.02 * (sim.projects?.active ? 0.5 : 1);
         if (chance(p)) {
           this._tripCooldown.set(agent.id, nowMin + 45);
           this.coffeeTrip(agent);
@@ -193,7 +199,7 @@ export class Behavior {
     }
 
     // 2) Kunjungan lintas divisi
-    if (working && ['work1', 'work2'].includes(block)) {
+    if (!sim.projects?.active && working && ['work1', 'work2'].includes(block)) {
       const flagKey = `visit_${block}`;
       if (agent.dayFlags[flagKey] !== sim.clock.day) {
         const p = gameMinutes * 0.002;
