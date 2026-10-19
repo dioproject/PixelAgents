@@ -6,7 +6,8 @@
 
 import { bus } from '../core/bus.js';
 import { uid, formatGameTime } from '../core/utils.js';
-import { isTauri, getInvoke } from '../core/config.js';
+import { isTauri, getInvoke, isLlmReady } from '../core/config.js';
+import { chat } from '../llm/client.js';
 import { buildProjectContentPrompt, buildProjectCodePrompt, parseProjectContent, parseProjectCode } from '../llm/prompts.js';
 import { projectContentFallback } from '../llm/fallback.js';
 import {
@@ -351,14 +352,68 @@ export class ProjectManager {
     }
   }
 
-  /** Task 7 mengisi versi LLM; saat ini selalu fallback. */
+  /** Pipeline A: konten paket (sections, poster, caption, budget, ga, memo). */
   async generateContent(project) {
-    return { value: projectContentFallback(project), source: 'template' };
+    const fallback = projectContentFallback(project);
+    if (!isLlmReady()) return { value: fallback, source: 'template' };
+    await this.waitForLlmFree();
+    const res = await this.withLlmBusy(() => chat(
+      buildProjectContentPrompt(this.sim, project),
+      { maxTokens: 2000, timeoutSecs: 60 },
+    ));
+    if (!res.ok) {
+      console.warn('[projects] konten LLM gagal, pakai fallback:', res.error);
+      return { value: fallback, source: 'template' };
+    }
+    const parsed = parseProjectContent(res.text);
+    if (!parsed) {
+      console.warn('[projects] JSON konten tidak terbaca, pakai fallback.');
+      return { value: fallback, source: 'template' };
+    }
+    return mergeProjectContent(parsed, fallback);
   }
 
-  /** Task 7 mengisi versi LLM; saat ini selalu template. */
+  /** Pipeline B: kode proyek (stack + files + run). */
   async generateCode(project) {
-    return this.templateCode(project);
+    if (!isLlmReady()) return this.templateCode(project);
+    await this.waitForLlmFree();
+    const res = await this.withLlmBusy(() => chat(
+      buildProjectCodePrompt(this.sim, project),
+      { maxTokens: 8000, timeoutSecs: 90 },
+    ));
+    const parsed = res.ok ? parseProjectCode(res.text) : null;
+    if (!parsed) {
+      console.warn('[projects] kode LLM gagal/tidak terbaca, pakai template:', res.error || 'json tidak valid');
+      return this.templateCode(project);
+    }
+    const { files, dropped } = normalizeCodeFiles(parsed.files);
+    if (files.length === 0) return this.templateCode(project);
+    return {
+      stack: parsed.stack || '',
+      run: parsed.run || [],
+      files: withGuaranteedReadme(files, project, parsed.run || []),
+      fallback: false,
+      dropped,
+    };
+  }
+
+  async waitForLlmFree(timeoutMs = 25000) {
+    const conv = this.sim.conversations;
+    if (!conv) return;
+    const t0 = performance.now();
+    while (conv.llmBusy && performance.now() - t0 < timeoutMs) {
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+
+  async withLlmBusy(fn) {
+    const conv = this.sim.conversations;
+    if (conv) conv.llmBusy = true;
+    try {
+      return await fn();
+    } finally {
+      if (conv) conv.llmBusy = false;
+    }
   }
 
   templateCode(project, reason = '') {
