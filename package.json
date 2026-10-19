@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "icons": "bun scripts/gen-icon.mjs"
+    "icons": "bun scripts/gen-icon.mjs",
+    "test": "bun test"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0"
