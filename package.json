@@ -1,0 +1,21 @@
+{
+  "name": "pixel-sinergi-nusantara",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "PT Pixel Sinergi Nusantara Tbk — Pixel corporate AI simulation built with Tauri 2 + Vite + Vanilla JS",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "icons": "bun scripts/gen-icon.mjs"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "vite": "^7.0.0"
+  }
+}
