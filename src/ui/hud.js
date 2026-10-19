@@ -3,7 +3,7 @@
 // ============================================================
 
 import { ROOMS, FLOOR_STYLES, WORLD_W, WORLD_H, tileCenter, roomCenter } from '../world/office.js';
-import { formatGameTime } from '../core/utils.js';
+import { formatGameTime, escapeHtml } from '../core/utils.js';
 import { saveSettings } from '../core/config.js';
 
 function statBar(label, value, max, color) {
@@ -184,6 +184,27 @@ export class HUD {
       ? `📋 Laporan Hari ${this.sim.lastReport.day}`
       : '📋 Laporan Hari Ini';
 
+    const proj = this.sim.projects;
+    let projectHtml = '';
+    if (proj?.active) {
+      const p = proj.active;
+      const pct = Math.min(100, Math.round((p.elapsedMin / p.durationMin) * 100));
+      const dots = ['it', 'marketing', 'finance', 'hrd', 'ga']
+        .map((d) => `<span class="project-dot${p.milestones?.[d]?.done ? ' on' : ''}"></span>`)
+        .join('');
+      projectHtml = `
+        <div class="project-widget">
+          <div class="panel-title" style="font-size:10px">📋 PROYEK AKTIF</div>
+          <div class="project-title" title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</div>
+          <div class="project-bar"><div style="width:${pct}%"></div></div>
+          <div class="project-meta"><span>${pct}%</span><span class="project-dots">${dots}</span></div>
+        </div>`;
+    } else if (proj?.archive?.length) {
+      projectHtml = `
+        <button id="btn-project-view" class="btn gold-btn" style="width:100%;margin-top:2px">📄 Lihat Hasil Proyek</button>
+        <button id="btn-project-archive" class="btn" style="width:100%;margin-top:4px">📁 Arsip Proyek (${proj.archive.length})</button>`;
+    }
+
     this.statsEl.innerHTML = [
       statBar('Mood rata²', Math.round(mood), 100, 'linear-gradient(90deg,#38a169,#7ee787)'),
       statBar('Stress rata²', Math.round(stress), 100, 'linear-gradient(90deg,#c53030,#ff6b6b)'),
@@ -191,11 +212,18 @@ export class HUD {
       statCount('💬 Percakapan', this.sim.stats.conversations),
       statCount('🚨 Insiden', this.sim.stats.incidents),
       statCount('📜 Titah', this.sim.stats.directives),
+      projectHtml,
       `<button id="btn-report" class="btn" style="width:100%;margin-top:2px">${reportLabel}</button>`,
     ].join('');
 
     document.getElementById('btn-report')?.addEventListener('click', () => {
       this.sim.openReport?.();
+    });
+    document.getElementById('btn-project-view')?.addEventListener('click', () => {
+      this.sim.openProject?.();
+    });
+    document.getElementById('btn-project-archive')?.addEventListener('click', () => {
+      this.sim.openProject?.();
     });
   }
 }

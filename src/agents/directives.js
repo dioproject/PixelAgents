@@ -46,6 +46,12 @@ export const DIRECTIVE_PRESETS = [
     title: 'Bebas Ngapain Aja Seharian',
     desc: 'Tidak ada tugas hari ini. Semua santai, tapi curiga ini jebakan.',
   },
+  {
+    type: 'proyek',
+    icon: '📋',
+    title: 'Tugas Proyek Baru',
+    desc: 'Tulis brief; semua divisi kerja, hasilnya paket file nyata (laporan, poster, CSV, kode).',
+  },
 ];
 
 const RESPONDERS_BY_TYPE = {
@@ -72,7 +78,10 @@ export class DirectiveSystem {
   send(type, customText = '') {
     const sim = this.sim;
     const preset = DIRECTIVE_PRESETS.find((p) => p.type === type);
-    const text = type === 'custom' ? String(customText || '').trim() : (preset?.title || 'Titah');
+    const rawCustom = String(customText || '').trim();
+    const text = (type === 'custom' || type === 'proyek') && rawCustom
+      ? rawCustom
+      : (preset?.title || 'Titah');
     if (!text) return;
 
     const directive = {
@@ -127,6 +136,10 @@ export class DirectiveSystem {
       case 'bebas': {
         sim.flags.freeDay = true;
         this.respond(directive);
+        break;
+      }
+      case 'proyek': {
+        this.sim.projects?.start(text);
         break;
       }
       case 'custom':

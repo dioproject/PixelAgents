@@ -6,6 +6,7 @@ import { getSettings, saveSettings } from '../core/config.js';
 import { testConnection } from '../llm/client.js';
 import { DIRECTIVE_PRESETS } from '../agents/directives.js';
 import { escapeHtml, formatGameTime } from '../core/utils.js';
+import { DIVISIONS } from '../world/office.js';
 
 function kpi(label, value, icon) {
   return `
@@ -231,10 +232,16 @@ export class Modals {
           </div>
           <div class="directive-grid">${cards}</div>
 
+          <div class="form-row hidden" id="dir-project-row">
+            <label for="dir-project">Brief proyek untuk seluruh divisi</label>
+            <textarea id="dir-project" rows="3" maxlength="160" placeholder="Contoh: Buat aplikasi desktop Tauri + Rust + SQLite + vanilla JS + Vite untuk absensi karyawan…"></textarea>
+            <span class="hint">Min 8 karakter. Semua divisi ikut kerja; hasilnya paket file nyata (laporan, poster, CSV, kode).</span>
+          </div>
+
           <div class="form-row">
             <label for="dir-custom">Atau tulis titah custom (opsional)</label>
             <textarea id="dir-custom" rows="3" maxlength="160" placeholder="Contoh: Besok semua divisi presentasi pakai kostum superhero…"></textarea>
-            <span class="hint">Maks 160 karakter. Jika diisi, titah custom dipakai dan pilihan kartu diabaikan.</span>
+            <span class="hint">Maks 160 karakter. Jika diisi, titah custom dipakai dan pilihan kartu diabaikan — kecuali kartu Tugas Proyek.</span>
           </div>
         </div>
         <div class="modal-foot">
@@ -247,12 +254,19 @@ export class Modals {
 
     let selected = 'rapat';
     const cardsEl = [...modal.querySelectorAll('.directive-card')];
+    const projectRow = modal.querySelector('#dir-project-row');
+    const sendBtn = modal.querySelector('#btn-directive-send');
+
     const setSelected = (btn) => {
       selected = btn.dataset.type || 'rapat';
       for (const c of cardsEl) {
         c.classList.toggle('active', c === btn);
         c.style.borderColor = c === btn ? 'var(--accent)' : '';
       }
+      const isProject = selected === 'proyek';
+      projectRow.classList.toggle('hidden', !isProject);
+      sendBtn.textContent = isProject ? '🚀 Mulai Proyek' : '📜 Kirim Titah';
+      if (isProject) setTimeout(() => modal.querySelector('#dir-project')?.focus(), 30);
     };
     for (const card of cardsEl) {
       card.addEventListener('click', () => setSelected(card));
@@ -262,12 +276,20 @@ export class Modals {
       btn.addEventListener('click', () => this.close());
     });
 
-    modal.querySelector('#btn-directive-send').addEventListener('click', () => {
-      const custom = modal.querySelector('#dir-custom').value.trim();
-      if (custom.length >= 3) {
-        this.sim.directives.send('custom', custom);
+    sendBtn.addEventListener('click', () => {
+      if (selected === 'proyek') {
+        const input = modal.querySelector('#dir-project');
+        const brief = input.value.trim();
+        if (brief.length < 8) {
+          input.style.borderColor = 'var(--danger)';
+          setTimeout(() => { input.style.borderColor = ''; }, 1200);
+          return;
+        }
+        this.sim.directives.send('proyek', brief);
       } else {
-        this.sim.directives.send(selected);
+        const custom = modal.querySelector('#dir-custom').value.trim();
+        if (custom.length >= 3) this.sim.directives.send('custom', custom);
+        else this.sim.directives.send(selected);
       }
       this.close();
     });
@@ -313,6 +335,119 @@ export class Modals {
     if (!modal) return;
     modal.querySelectorAll('[data-close]').forEach((btn) => {
       btn.addEventListener('click', () => this.close());
+    });
+  }
+
+  // ==========================================================
+  // Proyek (hasil & arsip)
+  // ==========================================================
+
+  openProject(project) {
+    const sim = this.sim;
+    if (!project) {
+      sim.toast?.('Belum ada proyek.', 'info');
+      return;
+    }
+    const running = project.status === 'running';
+    const pct = Math.min(100, Math.round((project.elapsedMin / project.durationMin) * 100));
+    const srcLabel = { llm: '🤖 LLM', mixed: '🤖+🧩 LLM + Template', template: '🧩 Template offline' }[project.source]
+      || (running ? '⏳ Sedang dikerjakan' : '—');
+
+    const sections = (project.content?.sections || []).map((s) => `
+      <div class="project-section">
+        <h4>${escapeHtml(`${DIVISIONS[s.division]?.name || s.division} — ${s.title}`)}</h4>
+        <p>${escapeHtml(s.text)}</p>
+      </div>
+    `).join('');
+
+    const fileRows = (project.files || []).map((f) => {
+      const icon = f.status === 'saved' || f.status === 'downloaded' ? '✅'
+        : f.status === 'failed' ? '❌'
+          : f.warn ? '⚠️' : '⏳';
+      const kb = Math.max(1, Math.round((f.bytes || 0) / 1024));
+      return `<div class="manifest-row"><span>${icon}</span><span class="mf-path">${escapeHtml(f.relPath)}</span><span class="mf-bytes">${kb} KB</span></div>`;
+    }).join('') || '<div class="hint" style="color:var(--text-dim);font-size:11px">Paket sedang disusun…</div>';
+
+    const archive = sim.projects?.archive || [];
+    const archiveSelect = archive.length > 1 ? `
+      <select id="proj-archive" class="select" style="max-width:280px">
+        ${archive.map((p) => `<option value="${p.id}" ${p.id === project.id ? 'selected' : ''}>${escapeHtml(`Hari ${p.day} — ${p.title}`)}</option>`).join('')}
+      </select>` : '';
+
+    const modal = this.open(`
+      <div class="modal" role="dialog" aria-modal="true" aria-label="Hasil Proyek">
+        <div class="modal-head">
+          <h2>📁 ${escapeHtml(project.title)}</h2>
+          <button class="btn tiny-btn modal-x" data-close type="button">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="hint" style="font-size:11.5px;color:var(--text-dim);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span>Hari ${project.day} · ${project.status === 'late' ? 'DIKEJAR DEADLINE' : running ? 'berjalan' : 'selesai'}</span>
+            <span class="badge-src">${srcLabel}</span>
+            ${project.folderPath ? `<span style="font-family:var(--font-mono);font-size:10px">${escapeHtml(project.folderPath)}</span>` : ''}
+          </div>
+
+          ${running ? `
+            <div class="project-widget">
+              <div class="project-title">Progres: ${pct}%</div>
+              <div class="project-bar"><div style="width:${pct}%"></div></div>
+            </div>
+            <div class="hint" style="font-size:11px;color:var(--text-dim)">Semua divisi sedang mengerjakan. Paket file muncul di sini setelah selesai.</div>
+          ` : ''}
+
+          ${project.posterDataUrl ? `<img class="project-poster" src="${project.posterDataUrl}" alt="Poster proyek" />` : ''}
+          ${sections}
+          <div>
+            <div class="panel-title" style="margin-bottom:6px">📦 Isi Paket (${(project.files || []).length} file)</div>
+            <div class="project-filelist">${fileRows}</div>
+          </div>
+          <div class="hint" style="font-size:11px;color:var(--text-dim)">Menunggu ACC Direktur. Kode hasil AI belum diuji otomatis — buka README di folder <code>kode/</code> sebelum dipakai.</div>
+        </div>
+        <div class="modal-foot" style="flex-wrap:wrap;gap:6px">
+          ${archiveSelect}
+          ${project.folderPath ? '<button id="btn-proj-open" class="btn" type="button">📁 Buka Folder</button>' : ''}
+          ${!running ? '<button id="btn-proj-resave" class="btn" type="button">💾 Simpan Ulang</button>' : ''}
+          ${!running ? '<button id="btn-proj-copy-report" class="btn" type="button">📋 Copy Laporan</button>' : ''}
+          ${!running ? '<button id="btn-proj-copy-caption" class="btn" type="button">📋 Copy Caption</button>' : ''}
+          <button class="btn gold-btn" data-close type="button">Tutup</button>
+        </div>
+      </div>
+    `);
+    if (!modal) return;
+
+    modal.querySelectorAll('[data-close]').forEach((btn) => {
+      btn.addEventListener('click', () => this.close());
+    });
+
+    modal.querySelector('#btn-proj-open')?.addEventListener('click', () => {
+      sim.projects?.openFolder(project);
+    });
+    modal.querySelector('#btn-proj-resave')?.addEventListener('click', async () => {
+      await sim.projects?.resave(project);
+    });
+
+    const copyFrom = async (relPath, label) => {
+      const file = (project.textFiles || []).find((f) => f.relPath === relPath);
+      if (!file) {
+        sim.toast?.('File belum tersedia.', 'info');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(file.content);
+        sim.toast?.(`📋 ${label} dicopy.`, 'success', 2600);
+      } catch {
+        sim.toast?.('Gagal mengcopy (izin clipboard).', 'danger');
+      }
+    };
+    modal.querySelector('#btn-proj-copy-report')?.addEventListener('click', () => copyFrom('laporan.md', 'Laporan'));
+    modal.querySelector('#btn-proj-copy-caption')?.addEventListener('click', () => copyFrom('caption-sosmed.txt', 'Caption'));
+
+    modal.querySelector('#proj-archive')?.addEventListener('change', (e) => {
+      const target = (sim.projects?.archive || []).find((p) => p.id === e.target.value);
+      if (target && target !== project) {
+        this.close();
+        this.openProject(target);
+      }
     });
   }
 
@@ -363,6 +498,7 @@ export class Modals {
             ${kpi('Kopi', c.coffee ?? 0, '☕')}
             ${kpi('Insiden', c.incidents ?? 0, '🚨')}
             ${kpi('Titah', c.directives ?? 0, '📜')}
+            ${kpi('Proyek', c.projects ?? 0, '📋')}
           </div>
 
           <div>
@@ -386,6 +522,12 @@ export class Modals {
             <div class="panel-title" style="margin-bottom:6px">📌 Catatan Penting</div>
             <div class="report-notes">${notable}</div>
           </div>
+
+          ${(r.projectsList && r.projectsList.length) ? `
+            <div>
+              <div class="panel-title" style="margin-bottom:6px">📋 Proyek Selesai Hari Ini</div>
+              ${r.projectsList.map((t) => `<div class="report-line"><span>${escapeHtml(t)}</span><b>selesai</b></div>`).join('')}
+            </div>` : ''}
 
           ${r.lastDirective ? `
             <div class="test-result">
