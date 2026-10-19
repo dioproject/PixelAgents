@@ -20,6 +20,7 @@ import { Behavior, blockFor } from './agents/behavior.js';
 import { ConversationManager } from './agents/conversation.js';
 import { IncidentSystem } from './agents/incidents.js';
 import { DirectiveSystem } from './agents/directives.js';
+import { ProjectManager } from './agents/projects.js';
 import {
   drawAgent, ensureAgentSprites, setAgentLookOverride,
 } from './engine/sprites.js';
@@ -64,10 +65,12 @@ const sim = {
     directives: 0,
     incidents: 0,
     conversations: 0,
+    projects: 0,
+    projectsToday: [],
   },
   lastDirective: null,
   lastReport: null,
-  daySnapshot: { coffeeDrinks: 0, directives: 0, incidents: 0, conversations: 0 },
+  daySnapshot: { coffeeDrinks: 0, directives: 0, incidents: 0, conversations: 0, projects: 0 },
   _timers: [],
   _timerSeq: 0,
 
@@ -111,6 +114,14 @@ const sim = {
     const report = this.lastReport || this.buildReport();
     this.modals?.openReport(report);
   },
+  openProject(project = null) {
+    const target = project || this.projects?.active || this.projects?.archive?.[0] || null;
+    if (!target) {
+      this.toast('Belum ada proyek. Kirim 📜 Titah "Tugas Proyek Baru" dulu.', 'info');
+      return;
+    }
+    this.modals?.openProject(target);
+  },
   buildReport() {
     return buildReport(this.clock.day, true);
   },
@@ -143,6 +154,7 @@ async function boot() {
   sim.behavior = new Behavior(sim);
   sim.conversations = new ConversationManager(sim);
   sim.incidents = new IncidentSystem(sim);
+  sim.projects = new ProjectManager(sim);
   sim.directives = new DirectiveSystem(sim);
 
   // ---- UI lanjutan (butuh agents & stats) ----
@@ -271,12 +283,16 @@ function applyBatik(on) {
 function endDay() {
   const finishedDay = sim.clock.day;
 
+  // Proyek yang belum kelar: dikejar deadline (paket template + disclaimer).
+  sim.projects?.finalizeLate();
+
   // Rapikan percakapan yang masih jalan agar tidak menyeberang hari.
   sim.conversations.endAll();
   sim.bubbles?.clear();
 
   const report = buildReport(finishedDay, false);
   sim.lastReport = report;
+  sim.stats.projectsToday = [];
 
   sim.feed.add({
     channel: 'sistem',
@@ -361,6 +377,7 @@ function buildReport(day, live) {
       coffee: Math.max(0, sim.stats.coffeeDrinks - (snap.coffeeDrinks || 0)),
       incidents: Math.max(0, sim.stats.incidents - (snap.incidents || 0)),
       directives: Math.max(0, sim.stats.directives - (snap.directives || 0)),
+      projects: Math.max(0, sim.stats.projects - (snap.projects || 0)),
     },
     avgMood: Math.round(avgMood),
     avgStress: Math.round(avgStress),
@@ -368,6 +385,7 @@ function buildReport(day, live) {
     topStress,
     notable: sim.feed ? sim.feed.recentNotable(5, day) : [],
     lastDirective: directive,
+    projectsList: [...(sim.stats.projectsToday || [])],
   };
 }
 
@@ -394,6 +412,7 @@ function update(dt, now) {
     const speedMul = Math.min(Math.max(sim.clock.speed, 1), 8);
     for (const agent of sim.agents) agent.update(dt, speedMul);
     sim.incidents.update(gameMinutes);
+    sim.projects.update(gameMinutes);
     runTimers(now);
   }
 

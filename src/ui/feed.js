@@ -7,7 +7,7 @@ import { AGENT_DEFS } from '../agents/roster.js';
 import { DIVISIONS } from '../world/office.js';
 
 const MAX_ITEMS = 400;
-const CHANNELS = new Set(['kerja', 'gosip', 'hr', 'direksi', 'sistem']);
+const CHANNELS = new Set(['kerja', 'gosip', 'hr', 'direksi', 'sistem', 'proyek']);
 
 const CHANNEL_LABEL = {
   kerja: 'kerja',
@@ -15,6 +15,7 @@ const CHANNEL_LABEL = {
   hr: 'HR',
   direksi: 'direksi',
   sistem: 'sistem',
+  proyek: 'proyek',
 };
 
 const defById = (id) => AGENT_DEFS.find((d) => d.id === id) || null;
@@ -91,7 +92,7 @@ export class FeedUI {
 
   trackNotable(item) {
     const from = defById(item.from);
-    if (item.channel === 'hr' || item.channel === 'direksi' || item.meta?.incident) {
+    if (item.channel === 'hr' || item.channel === 'direksi' || item.meta?.incident || item.meta?.project) {
       this.lastNotable = {
         text: item.text,
         from: from?.name || (item.channel === 'direksi' ? 'Direksi' : 'Sistem'),
@@ -116,7 +117,7 @@ export class FeedUI {
     for (let i = this.items.length - 1; i >= 0 && out.length < limit; i--) {
       const it = this.items[i];
       if (day != null && it.day !== day) continue;
-      if (!(it.channel === 'hr' || it.channel === 'direksi' || it.meta?.incident)) continue;
+      if (!(it.channel === 'hr' || it.channel === 'direksi' || it.meta?.incident || it.meta?.project)) continue;
       if (out.some((x) => x.text === it.text)) continue;
       const from = defById(it.from);
       out.push({
