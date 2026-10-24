@@ -8,6 +8,23 @@ Dibangun dengan **Tauri 2 (Rust) + Vite + Vanilla JS** — ringan (RAM < 100 MB)
 
 ---
 
+## 🦀 Versi Native Rust (v1.0 — utama)
+
+Sekarang ada versi **full Rust** di folder [`native/`](native/): tanpa JavaScript,
+tanpa WebView, memakai `eframe`/`egui` + OpenGL. Fokusnya berubah dari *game*
+menjadi **studio agen AI**: kantor pixel cozy yang mengikuti **jam nyata komputer**
+dan menghasilkan **paket deliverable nyata** (kode, PPTX, poster, GIF, CSV, memo)
+ke `Documents\PixelSinergi`.
+
+- 📖 Arsitektur: [`docs/NATIVE.md`](docs/NATIVE.md)
+- ▶️ Jalankan: `cd native && cargo run` (atau `cargo run --release`)
+- 📦 Installer: `bash scripts/build-msi.sh` → `dist-installer/PixelSinergi-1.0.0-x64.msi` (≈3.5 MB)
+- 🧪 Test: `cd native && cargo test` · 🖼️ contoh paket: `cargo run -- --gen-sample`
+
+Versi Tauri + Canvas di bawah ini tetap tersedia sebagai referensi/arsip.
+
+---
+
 ## ✨ Fitur Utama
 
 | Fitur | Deskripsi |

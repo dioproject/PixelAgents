@@ -1,0 +1,27 @@
+[package]
+name = "pixel-sinergi"
+version = "1.0.0"
+edition = "2021"
+description = "Pixel Sinergi — Cozy AI Agent Studio (native Rust)"
+authors = ["PT Pixel Sinergi Nusantara"]
+license = "MIT"
+
+[dependencies]
+eframe = { version = "0.37", default-features = false, features = ["default_fonts", "glow", "accesskit", "__screenshot"] }
+chrono = { version = "0.4", features = ["clock", "serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+image = { version = "0.25", default-features = false, features = ["png", "ico"] }
+gif = "0.14"
+fontdue = "0.9"
+rand = "0.8"
+anyhow = "1"
+ppt-rs = "0.2.36"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

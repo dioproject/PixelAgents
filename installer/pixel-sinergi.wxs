@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Installer MSI — Pixel Sinergi (WiX Toolset v3) -->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product
+      Id="*"
+      Name="Pixel Sinergi — Cozy AI Studio"
+      Language="1057"
+      Version="1.0.0.0"
+      Manufacturer="PT Pixel Sinergi Nusantara"
+      UpgradeCode="7E2B1C3A-9F41-4C7E-9C55-2A11B0DE77C4">
+
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" Platform="x64"
+             Description="Studio kantor virtual AI: agen bekerja sesuai jam nyata dan menghasilkan paket deliverable nyata." />
+    <MajorUpgrade DowngradeErrorMessage="Versi Pixel Sinergi yang lebih baru sudah terpasang." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="AppIcon.ico" SourceFile="$(var.IconPath)" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/dioproject/PixelAgents" />
+
+    <Feature Id="Main" Title="Pixel Sinergi" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+      <ComponentRef Id="DesktopShortcut" />
+    </Feature>
+  </Product>
+
+  <Fragment>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="Pixel Sinergi" />
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="AppMenuFolder" Name="Pixel Sinergi" />
+      </Directory>
+      <Directory Id="DesktopFolder" />
+    </Directory>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Component Id="MainExe" Guid="C1A2B3D4-5E6F-4A7B-8C9D-0E1F2A3B4C5D" Win64="yes">
+        <File Id="PixelSinergiExe" Source="$(var.ExePath)" KeyPath="yes" />
+      </Component>
+      <!-- Font & aset opsional (jika disalin sebagai data) -->
+      <Component Id="Readme" Guid="D2B3C4E5-6F70-4B8C-9D0E-1F2A3B4C5D6E" Win64="yes">
+        <File Id="ReadmeMd" Source="$(var.ReadmePath)" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <DirectoryRef Id="AppMenuFolder">
+      <Component Id="StartMenuShortcut" Guid="E3C4D5F6-7081-4C9D-AE1F-2A3B4C5D6E7F">
+        <Shortcut Id="StartMenuLink"
+                  Name="Pixel Sinergi"
+                  Description="Cozy AI Agent Studio"
+                  Target="[INSTALLFOLDER]pixel-sinergi.exe"
+                  WorkingDirectory="INSTALLFOLDER" />
+        <RemoveFolder Id="RemoveAppMenuFolder" Directory="AppMenuFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\PixelSinergi" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    <DirectoryRef Id="DesktopFolder">
+      <Component Id="DesktopShortcut" Guid="F4D5E6A7-8192-4DAE-BF2A-3B4C5D6E7F80">
+        <Shortcut Id="DesktopLink"
+                  Name="Pixel Sinergi"
+                  Description="Cozy AI Agent Studio"
+                  Target="[INSTALLFOLDER]pixel-sinergi.exe"
+                  WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU" Key="Software\PixelSinergi" Name="desktop" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+  </Fragment>
+</Wix>
