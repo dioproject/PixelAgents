@@ -1,258 +1,204 @@
-# 🗃️ SCHEMA — Skema Data PT Pixel Sinergi Nusantara Tbk
+# 🗃️ SCHEMA — Skema Data PT Pixel Sinergi Nusantara Tbk (Native Rust)
 
-Semua data runtime berbentuk objek JavaScript (in-memory). Hanya **Settings** yang dipersist ke disk. Format di bawah memakai notasi TypeScript-like untuk kejelasan.
-
----
-
-## 1. Settings (Persisted)
-
-Disimpan di `app_config_dir/pixel-sinergi/config.json` (Tauri) atau `localStorage["pixel-sinergi/config"]` (browser).
-
-```ts
-interface Settings {
-  baseUrl: string;          // "" = belum diisi → fallback procedural
-  apiKey: string;           // "" untuk Ollama lokal
-  model: string;            // "gpt-4o-mini", "llama3.3", ...
-  temperature: number;      // 0.0 - 2.0, default 0.9
-  maxTokens: number;        // default 400
-  timeoutSecs: number;      // default 45
-  offlineMode: boolean;     // true = paksa fallback procedural
-  soundEnabled: boolean;    // default true
-  defaultSpeed: number;     // 1 | 2 | 4 | 8 | 16 ; default 2
-  showBubbles: boolean;     // tampilkan speech bubble, default true
-}
-```
-
-## 2. Division
-
-```ts
-interface Division {
-  id: 'it' | 'marketing' | 'finance' | 'hrd' | 'ga' | 'exec';
-  name: string;             // "IT & Engineering"
-  short: string;            // "IT"
-  color: string;            // hex untuk feed & label
-  floorTint: [string, string]; // [base, checker] warna lantai
-}
-```
-
-## 3. AgentDef (Roster — statis)
-
-```ts
-interface AgentDef {
-  id: string;               // "bayu"
-  name: string;             // "Bayu"
-  role: string;             // "Senior Backend Engineer"
-  division: DivisionId;
-  level: 1 | 2 | 3;         // 1 junior, 2 senior/staff, 3 manager/head
-  gender: 'm' | 'f';
-  style: string;            // deskripsi gaya bicara (dipakai prompt)
-  traits: string[];         // ["garing", "kopi-addict", "trauma-deploy-jumat"]
-  catchphrases: string[];   // untuk fallback & flare prompt
-  downTone: 'casual' | 'sweet' | 'jaksel' | 'chill' | 'bossy'; // gaya saat bicara ke bawahan
-  lookup: {                 // posisi & warna
-    skin: string; hair: string; hairStyle: number;   // index gaya rambut 0-5
-    top: string; bottom: string; accent: string;     // warna baju, celana, aksen
-  };
-  desk: { x: number; y: number; face: 'up'|'down'|'left'|'right' }; // tile kursi
-  salary: number;           // angka satir untuk panel (Rp)
-  coffeeLevel: 0 | 1 | 2 | 3; // seberapa sakau kesehariannya
-}
-```
-
-## 4. Runtime Agent (mutable)
-
-```ts
-interface Agent extends AgentDef {
-  px: number; py: number;           // posisi pixel (feet anchor)
-  facing: 'up'|'down'|'left'|'right';
-  frame: string;                    // nama frame sprite aktif
-  animT: number;                    // akumulator animasi
-  path: Tile[];                     // sisa jalur (tile grid)
-  activity: Activity;               // aktivitas saat ini
-  stats: AgentStats;
-  bubble: BubbleState | null;
-  gone: boolean;                    // sudah pulang?
-  log: string[];                    // 3 kutipan terakhir
-}
-
-interface AgentStats {
-  mood: number;      // 0-100
-  stress: number;    // 0-100
-  coffee: number;    // 0-5 (kafein dalam darah, satir)
-  chattedToday: number;
-}
-
-interface Activity {
-  type: 'idle' | 'walk' | 'work' | 'coffee' | 'chat' | 'meeting'
-      | 'slack' | 'lunch' | 'lobby' | 'gone';
-  target?: Tile | Tile[];    // tujuan walk
-  seat?: SeatRef;            // kursi (desk/meeting/pantry)
-  forced?: boolean;          // true = jangan di-override planner
-  onArrive?: () => void;     // callback saat sampai
-  until?: number;            // waktu game (menit) aktivitas berakhir
-  facing?: Facing;           // untuk duduk/slack
-  label?: string;            // untuk inspector: "Ngetik sprint board", dsb.
-}
-```
-
-## 5. Office Map
-
-```ts
-interface Room {
-  id: string;              // "it", "meeting", "director", "corridor1", "pantry", ...
-  label: string;           // "Divisi IT & Engineering"
-  x: number; y: number;    // tile interior kiri-atas
-  w: number; h: number;    // ukuran interior (tile)
-  floor: FloorStyleId;     // referensi ke gaya lantai (warna + pattern)
-  labelAnchor?: Tile;      // posisi label DOM
-}
-
-interface Furniture {
-  id: string;              // "desk.bayu", "meeting.table", ...
-  type: FurnitureType;     // "desk" | "roundTable" | "sofa" | ... (lihat DESIGN.md)
-  x: number; y: number;    // tile kiri-atas
-  w: number; h: number;    // ukuran (tile)
-  blocking: boolean;       // menghalangi jalan?
-  rot?: 0 | 90;            // rotasi (90 = vertikal)
-  meta?: Record<string, any>; // mis. { screenFacing: 'down' }
-}
-
-interface SeatRef {
-  id: string;              // "seat.bayu" | "seat.meeting.3"
-  x: number; y: number;    // tile tempat duduk
-  facing: Facing;          // arah hadap saat duduk
-  kind: 'desk' | 'meeting' | 'pantry' | 'sofa' | 'lobby';
-}
-
-interface Hotspot {
-  id: string;              // "coffee.machine", "dispenser", "printer", ...
-  x: number; y: number;    // tile interaksi (tempat berdiri)
-  stand: Tile;             // tile berdiri paling aman
-  label: string;
-}
-```
-
-## 6. Conversation
-
-```ts
-interface Turn {
-  speakerId: string;       // agent id | "hr" | "system"
-  speakerName: string;     // display
-  text: string;            // maks 180 char
-  tone: 'casual' | 'formal' | 'hr-alert' | 'system' | 'director';
-  at: number;              // jadwal tayang (ms wall-clock relatif konvoi)
-}
-
-interface Conversation {
-  id: string;
-  kind: 'pair' | 'group' | 'incident' | 'directive' | 'meeting';
-  participants: string[];  // agent ids
-  origin: 'llm' | 'fallback' | 'scripted';
-  turns: Turn[];
-  cursor: number;
-  startedAt: number;
-}
-```
-
-## 7. Feed & Events
-
-```ts
-interface FeedEvent {
-  id: string;
-  t: number;               // game minutes
-  day: number;
-  channel: 'kerja' | 'gosip' | 'hr' | 'direksi' | 'sistem';
-  from?: string;           // agent id pengirim
-  text: string;
-  meta?: { incident?: string; directive?: string; to?: string };
-}
-
-interface Incident {
-  id: 'keceplosan' | 'ac_war' | 'reimburse' | 'printer' | 'kpi' | 'birthday' | 'bsod';
-  weight: number;          // bobot pemilihan
-  cooldown: number;        // menit game sebelum boleh muncul lagi
-  minDay?: number;
-}
-
-interface Directive {
-  type: 'rapat' | 'budget' | 'lembur' | 'pizza' | 'batik' | 'bebas' | 'custom';
-  text: string;            // teks titah yang dibacakan sistem
-  at: number;
-  effects: DirectiveEffect[];
-}
-
-interface DirectiveEffect {
-  kind: 'gather' | 'stat' | 'flag' | 'line';
-  // gather: pindahkan agen ke lokasi; stat: delta mood/stress; flag: aktifkan kondisi; line: pakai bank reaksi
-  payload: any;
-}
-```
-
-## 8. Camera & UI State
-
-```ts
-interface CameraState { x: number; y: number; zoom: 1|2|3|4; }
-
-interface UIState {
-  selectedAgentId: string | null;
-  feedTab: 'all' | 'kerja' | 'gosip' | 'hr';
-  modal: null | 'settings' | 'directive' | 'about';
-  paused: boolean;
-  speed: number;
-}
-```
-
-## 9. Save Data (v0.2 — belum dipakai)
-
-```ts
-interface SaveState {
-  version: 1;
-  day: number;
-  timeMin: number;
-  agents: { id: string; stats: AgentStats }[];
-  feedTail: FeedEvent[];   // 50 terakhir
-  flags: Record<string, boolean>;
-}
-```
-
-## 10. Project (Tugas Proyek)
-
-```ts
-interface ProjectFile { relPath: string; kind: 'text' | 'binary'; bytes: number; status: 'pending' | 'saved' | 'downloaded' | 'failed'; warn: boolean }
-
-interface Project {
-  id: string;
-  title: string;                 // brief dari Direktur (≤160 char)
-  day: number;
-  startedAtMin: number;          // menit kantor saat mulai
-  durationMin: number;           // 20–40
-  elapsedMin: number;            // progres berjalan
-  milestones: Record<'it'|'marketing'|'finance'|'hrd'|'ga', { done: boolean; atPct: number }>;
-  status: 'running' | 'done' | 'late';
-  content: object | null;        // sections[5], poster, caption, budget[], ga[], memo
-  contentSource: 'llm' | 'mixed' | 'template' | null;
-  code: { stack: string; run: string[]; files: { path: string; content: string; bytes: number; warn: boolean }[]; fallback: boolean; dropped: number } | null;
-  source: 'llm' | 'mixed' | 'template' | null;   // gabungan konten + kode
-  posterDataUrl: string | null;  // PNG dataURL 1080²
-  iconDataUrl: string | null;    // PNG dataURL 512²
-  files: ProjectFile[];          // manifest paket (8 item + kode/**)
-  textFiles: { relPath: string; content: string }[];
-  folderName: string;            // <YYYY-MM-DD> - Hari <n> - <slug>
-  folderPath: string | null;     // null di mode browser
-  finishedAtMin: number | null;
-}
-```
-
-- Feed channel: `proyek` (mulai, 5 tonggak, selesai).
-- Stats: `stats.projects` (total) dan `stats.projectsToday[]` (judul; direset setelah laporan harian dibuat).
-- Laporan harian: `counters.projects` + `projectsList[]`.
+Seluruh struktur data domain utama didefinisikan dalam kode sumber Rust (`src/`). Dokumen ini mencatat skema data runtime dan berkas konfigurasi.
 
 ---
 
-## Aturan Validasi Penting
+## 1. Pengaturan Aplikasi (`Settings`)
 
-1. `Turn.text` wajib ≤ 180 karakter (dipotong otomatis) dan tanpa newline.
-2. `speakerId` harus ada di roster, atau merupakan id spesial (`hr`, `system`).
-3. Balon kata maksimal 1 aktif per agen; balon baru menimpa yang lama.
-4. Feed menyimpan maksimal 400 item (FIFO) agar DOM tetap ringan.
-5. Pathfinding 4 arah (bukan diagonal) di grid walkable; tile furniture `blocking=true` tidak bisa dilewati.
+Disimpan di disk lokal pengguna pada `%APPDATA%\PixelSinergi\settings.json`.
+
+```rust
+pub struct Settings {
+    pub base_url: String,           // Mis. "https://openrouter.ai/api/v1" atau "http://localhost:11434"
+    pub api_key: String,            // Kunci API (opsional untuk endpoint lokal)
+    pub model: String,              // Mis. "gpt-4o-mini"
+    pub temperature: f32,           // 0.0 - 2.0 (default: 0.9)
+    pub max_tokens: u32,            // Batas token per permintaan (default: 900)
+    pub timeout_secs: u64,          // Waktu tunggu HTTP (default: 60)
+    pub offline: bool,              // true = memaksa penggunaan template prosedural tanpa jaringan
+    pub project_pace_secs: f32,     // Durasi pengerjaan proyek dalam detik (default: 300.0)
+    pub compact: bool,              // Tampilan kompak UI
+    pub always_on_top: bool,        // Jendela selalu di atas
+    pub sound: bool,                // Efek audio aktif
+    pub show_names: bool,           // Tampilkan nama di atas karakter
+}
+```
+
+---
+
+## 2. Divisi Kantor (`Div`)
+
+Didefinisikan dalam `src/office.rs`:
+
+```rust
+pub enum Div {
+    It,         // "IT & Engineering"   (Warna: [0x8f, 0xb3, 0xff])
+    Marketing,  // "Marketing & Creative" (Warna: [0xff, 0x9e, 0xc4])
+    Finance,    // "Finance & Accounting" (Warna: [0x9f, 0xe6, 0xa0])
+    Hrd,        // "HRD & People Ops"   (Warna: [0x7c, 0xe0, 0xd6])
+    Ga,         // "General Affairs"    (Warna: [0xff, 0xd9, 0x8a])
+    Exec,       // "Direksi"            (Warna: [0xff, 0xc8, 0x57])
+}
+```
+
+---
+
+## 3. Roster Karyawan Statis (`AgentDef`)
+
+Didefinisikan dalam `src/data.rs`:
+
+```rust
+pub struct AgentDef {
+    pub id: &'static str,               // "bayu", "jessica", "endang", dll.
+    pub name: &'static str,             // Nama tampilan
+    pub role: &'static str,             // Jabatan
+    pub div: Div,                       // Divisi kerja
+    pub level: u8,                      // 1: Junior/Staff, 2: Senior/Lead, 3: Head/Manager
+    pub style: &'static str,            // Karakteristik gaya bicara untuk prompt LLM
+    pub traits: &'static [&'static str],// Kepribadian khas
+    pub phrases: &'static [&'static str],// Kalimat khas
+    pub habits: &'static str,           // Kebiasaan di kantor
+    pub salary: u64,                    // Gaji bulanan satir (Rupiah)
+    pub seat: &'static str,             // ID kursi meja kerja (mis. "seat.bayu")
+    // Palet warna sprite (RGB)
+    pub skin: [u8; 3],
+    pub hair: [u8; 3],
+    pub top: [u8; 3],
+    pub bottom: [u8; 3],
+    pub accent: [u8; 3],
+}
+```
+
+---
+
+## 4. State Agen Runtime (`Agent`)
+
+Didefinisikan dalam `src/sim.rs`:
+
+```rust
+pub struct Agent {
+    pub def: &'static AgentDef,         // Referensi ke definisi statis
+    pub pos: (f32, f32),                // Koordinat posisi float dalam grid (x, y)
+    pub path: Vec<(i32, i32)>,          // Jalur langkah hasil pathfinding A*
+    pub path_i: usize,                  // Indeks langkah saat ini
+    pub present: bool,                  // Apakah sedang hadir di kantor
+    pub sit: bool,                      // Apakah sedang dalam posisi duduk
+    pub facing: char,                   // Arah hadap: 'u', 'd', 'l', 'r'
+    pub activity: String,               // Deskripsi aktivitas saat ini untuk UI
+    pub goal: (i32, i32),               // Tile tujuan pergerakan
+    pub goal_label: String,             // Label tujuan
+    pub goal_sit: bool,                 // Apakah harus duduk setibanya di tujuan
+    pub plan_key: String,               // Cache status perencanaan untuk menghindari repath berulang
+    pub bubble: Option<(String, f64)>,  // Balon kata: (teks, timestamp batas tampil)
+    pub mood: f32,                      // 0.0 - 100.0
+    pub stress: f32,                    // 0.0 - 100.0
+    pub coffee: f32,                    // Kafein dalam darah (0.0 - 5.0)
+    pub walk_phase: f32,                // Akumulator animasi langkah kaki
+    pub arrive_min: i32,                // Jadwal jam tiba kerja (dalam menit dari 00:00)
+    pub leave_min: i32,                 // Jadwal jam pulang kerja
+    pub side_trip_until: f64,           // Waktu berakhirnya aktivitas sampingan (kopi/istirahat)
+    pub trip_cooldown: f64,             // Jeda waktu sebelum boleh mengambil aktivitas sampingan lagi
+    pub moving: bool,                   // Apakah sedang berjalan aktif
+}
+```
+
+---
+
+## 5. Peta Kantor & Ruangan
+
+Didefinisikan dalam `src/office.rs`:
+
+```rust
+pub struct Room {
+    pub id: &'static str,               // "it", "marketing", "pantry", "meeting", dll.
+    pub label: Option<&'static str>,    // Label ruangan untuk tampilan visual
+    pub x: i32,                         // Batas kiri tile interior
+    pub y: i32,                         // Batas atas tile interior
+    pub w: i32,                         // Lebar interior (tile)
+    pub h: i32,                         // Tinggi interior (tile)
+    pub floor: &'static str,            // Gaya lantai
+    pub corridor: bool,                 // Apakah merupakan koridor lalu lalang
+}
+
+pub struct Furn {
+    pub kind: &'static str,             // Tipe furnitur ("desk", "roundTable", "sofa", dll)
+    pub x: i32,
+    pub y: i32,
+    pub w: i32,
+    pub h: i32,
+    pub blocking: bool,                 // true = menghalangi pergerakan (obstacle A*)
+}
+```
+
+---
+
+## 6. Proyek & Hasil Deliverable
+
+Didefinisikan dalam `src/sim.rs` dan `src/deliver.rs`:
+
+```rust
+pub enum ProjStatus {
+    Running,    // Sedang dikerjakan
+    Packing,    // Menyiapkan paket berkas
+    Done,       // Selesai
+    Late,       // Melewati batas waktu
+}
+
+pub struct Milestone {
+    pub div: Div,                       // Divisi penanggung jawab tonggak
+    pub pct: f32,                       // Persentase pemicu (0.20, 0.36, 0.52, dll)
+    pub done: bool,                     // Status tercapai
+    pub note: &'static str,             // Catatan progres feed
+}
+
+pub struct Project {
+    pub id: u64,                        // Timestamp ID proyek
+    pub title: String,                  // Judul proyek (berasal dari brief Direktur)
+    pub brief: String,                  // Teks lengkap brief
+    pub kind: &'static str,             // "software", "presentation", "campaign", "document", "generic"
+    pub stack: &'static str,            // "tauri", "vite", "python", "react", dll.
+    pub started: DateTime<Local>,       // Waktu mulai pengerjaan
+    pub total_secs: f32,                // Durasi total pengerjaan (detik)
+    pub elapsed: f32,                   // Waktu yang telah berjalan
+    pub milestones: Vec<Milestone>,     // Daftar 5 tonggak divisi
+    pub status: ProjStatus,
+    pub late: bool,
+}
+
+pub struct FileEntry {
+    pub rel: String,                    // Jalur relatif file dalam paket
+    pub bytes: usize,                   // Ukuran file dalam byte
+    pub ok: bool,                       // Status keberhasilan penulisan ke disk
+}
+
+pub struct Delivered {
+    pub id: u64,
+    pub title: String,
+    pub kind: &'static str,
+    pub day_label: String,
+    pub finished: DateTime<Local>,
+    pub folder: PathBuf,                // Lokasi folder paket di disk
+    pub files: Vec<FileEntry>,          // Manifest file yang dihasilkan
+    pub poster_png: Option<Vec<u8>>,    // Buffer biner poster
+    pub icon_png: Option<Vec<u8>>,      // Buffer biner ikon
+    pub source: &'static str,           // "llm" atau "template"
+    pub late: bool,
+    pub sections: Vec<(String, String, String)>,
+    pub caption: String,
+    pub report_md: String,
+    pub run_hint: String,
+}
+```
+
+---
+
+## 7. Feed & Komunikasi
+
+```rust
+pub struct FeedItem {
+    pub time: String,                   // Waktu lokal kejadian (mis. "09:15")
+    pub channel: &'static str,          // "kerja", "gosip", "direksi", "sistem", "proyek", "pantry", "insiden"
+    pub text: String,                   // Teks pemberitahuan
+}
+```

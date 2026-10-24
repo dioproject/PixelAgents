@@ -1,6 +1,6 @@
 # 📋 PRD — PT Pixel Sinergi Nusantara Tbk
 
-**Versi:** 1.0.0 · **Status:** Approved · **Tanggal:** 19 Oktober 2026
+**Versi:** 1.0.0 (Native Rust) · **Status:** Active · **Tanggal:** 24 Oktober 2026
 
 ---
 
@@ -8,123 +8,87 @@
 
 Dunia kerja kantor Indonesia penuh dengan dinamika unik: obrolan pantry, drama reimburse, perang suhu AC, hingga typo maut yang terkirim ke grup Direksi. Fenomena ini sangat relatable, lucu, dan hampir tidak pernah disimulasikan dalam bentuk yang interaktif.
 
-**PT Pixel Sinergi Nusantara Tbk** adalah simulasi desktop bergaya pixel art di mana pengguna menjadi Direktur Utama dan mengamati (serta memprovokasi) kantor yang dihuni karyawan-karyawan AI dengan kepribadian khas Indonesia.
+**PT Pixel Sinergi Nusantara Tbk** adalah aplikasi desktop bernuansa *cozy AI agent studio* bergaya pixel art di mana pengguna memantau kantor virtual yang berjalan mengikuti **jam nyata komputer** (OS clock) dan mempekerjakan karyawan-karyawan AI dengan kepribadian satir khas Indonesia untuk memproduksi **paket deliverable nyata** ke disk komputer.
 
 ## 2. Tujuan Produk
 
-1. **Menghibur**: Menjadi "tontonan hidup" kantor fiktif yang lucu — seperti reality show pixel art.
-2. **Relatable**: Humor yang dekat dengan pengalaman kerja/kuliah/organisasi pengguna Indonesia.
-3. **Fleksibel**: Berjalan penuh tanpa API (mode offline) namun lebih pintar dengan LLM custom endpoint (9router, OpenRouter, Ollama, dsb.).
-4. **Ringan**: Desktop app Tauri — binary kecil (< 20 MB), RAM hemat (< 100 MB), jalan lancar di laptop kantor tipikal.
+1. **Cozy Desktop Companion**: Menjadi "tontonan hidup" di sudut layar desktop dengan kantor pixel hangat, pencahayaan 24-jam dinamis, kucing kantor, dan agen yang beraktivitas sesuai jam nyata.
+2. **AI Studio Nyata**: Menghasilkan deliverable file nyata (laporan Markdown, slide presentasi PPTX asli, poster PNG, ikon aplikasi, anggaran CSV, memo SDM, scaffold kode) langsung ke folder `Documents\PixelSinergi`.
+3. **Relatable & Satir**: Humor budaya kerja Indonesia yang dekat dengan realitas sehari-hari (reimburse, kopi sachet, revisi, KPI, lembur).
+4. **Ringan & Native**: Dibangun murni dengan Rust (`eframe`/`egui` + OpenGL) — tanpa WebView, tanpa Chromium, RAM hemat (±60–90 MB), startup instan, dan installer MSI yang ringkas (≈3.5 MB).
+5. **Mandiri (Offline-First)**: Berfungsi 100% tanpa internet/API dengan generator template prosedural, namun dapat ditingkatkan dengan endpoint LLM OpenAI-compatible (9router, OpenRouter, Groq, Ollama, OpenAI).
 
-### Non-Goals (Sekarang)
-- ❌ Multiplayer / networking antar pengguna
-- ❌ Akun, login, atau sinkronisasi cloud
-- ❌ Ekonomi in-game kompleks (pajak, payroll real)
-- ❌ Modding / scripting oleh pengguna
+### Non-Goals
+- ❌ Mengeksekusi atau mengompilasi kode hasil generate AI secara otomatis (keamanan disk pengguna).
+- ❌ Sinkronisasi akun / cloud berbayar wajib.
+- ❌ Multiplayer online.
 
 ## 3. Persona Pengguna
 
 | Persona | Deskripsi | Kebutuhan |
 |---|---|---|
-| **"Bos" — Direktur Utama (P0)** | Pengguna utama. Suka mengamati, memprovokasi kantor, dan menertawakan drama. | Monitoring menyeluruh, intervensi lucu (Titah Direksi), feedback cepat & jelas. |
+| **Direktur Utama (God Mode)** | Pengguna aplikasi yang memantau kantor, mengeluarkan titah, dan menugaskan proyek baru. | Pantauan kantor menyeluruh, kontrol titah, delegasi proyek, kemudahan akses folder hasil di disk. |
 
 ## 4. User Stories & Acceptance Criteria
 
-### US-01 — Menonton Kantor Hidup
-> Sebagai Direktur, saya ingin melihat kantor pixel dengan karyawan yang bergerak dan beraktivitas, agar terasa hidup.
+### US-01 — Kantor Pixel Real-Time
+> Sebagai Direktur, saya ingin kantor pixel mengikuti jam nyata komputer saya, agar terasa seperti kantor companion nyata.
 
 **Acceptance:**
-- Karyawan berjalan dari meja ke pantry, duduk, mengetik, minum kopi dengan animasi.
-- Rutinitas harian berjalan otomatis dari jam 08:30 hingga 18:00 lalu berganti hari.
-- Pergerakan memakai pathfinding (tidak menembus dinding/furniture).
+- Waktu berjalan sinkron dengan jam lokal OS (`chrono::Local`).
+- Perubahan fase 24-jam: Dini hari (00–05), Pagi buta (05–07), Jam kerja (07–12), Istirahat (12–13), Sore (13–17), Jam pulang (17–18), Lembur (18–23).
+- Pencahayaan ambient berubah dinamis (indigo malam, sunrise, siang cerah, sunset jingga, redup lembur) dengan glow hangat pada lampu meja agen yang aktif.
+- Kucing kantor berkeliaran, tidur, dan grooming di sekitar area kantor.
 
-### US-02 — Membaca Obrolan Karyawan
-> Sebagai Direktur, saya ingin membaca obrolan karyawan secara real-time, agar bisa mengintip drama kantor.
-
-**Acceptance:**
-- Dialog muncul sebagai balon kata (speech bubble) di atas kepala karakter.
-- Semua dialog masuk ke **Office Feed** dengan timestamp + tab filter (Semua/Kerja/Gosip/HR).
-- Tanpa API key: dialog berasal dari bank procedural yang kontekstual (tempat, divisi, waktu).
-- Dengan API key: dialog digenerate LLM dengan kepribadian masing-masing karakter.
-- Selalu ada fallback saat LLM timeout/gagal — simulasi tidak pernah macet.
-
-### US-03 — Inspeksi Karyawan
-> Sebagai Direktur, saya ingin mengklik karyawan dan melihat profil & kondisinya.
+### US-02 — Live Office Feed & Obrolan Karyawan
+> Sebagai Direktur, saya ingin membaca obrolan karyawan secara real-time dan melihat balon kata di atas mereka.
 
 **Acceptance:**
-- Panel inspector menampilkan: nama, jabatan, divisi, level, mood, stress, kecanduan kopi, status aktivitas, kutipan terakhir.
-- Klik karyawan di canvas ATAU di feed/daftar agen membuka inspector + pan camera ke lokasi.
+- Balon kata (speech bubble) muncul di atas kepala karakter saat berbicara.
+- Semua peristiwa, percakapan, tonggak proyek, dan sistem tercatat di panel **Live Office Feed**.
+- Bank dialog procedural hidup saat offline atau ambient, mencakup konteks pagi, makan siang, sore, lembur, hujan, kopi, insiden, dan proyek.
+
+### US-03 — Tugas Proyek & Paket Deliverable Nyata
+> Sebagai Direktur, saya ingin menugaskan brief proyek bebas dan menerima paket deliverable nyata di folder Documents komputer saya.
+
+**Acceptance:**
+- Brief proyek bebas (software, presentation, campaign, document, generic).
+- Deteksi otomatis jenis proyek dan tech stack dari brief pengguna.
+- Progres proyek bertahap dengan 5 tonggak divisi (IT, Marketing, Finance, HRD, GA) yang muncul di feed.
+- Saat selesai, paket tersimpan otomatis ke `Documents\PixelSinergi\<tanggal> - <slug>\`.
+- Isi paket menyesuaikan jenis proyek:
+  - `laporan.md` (laporan lengkap multi-divisi)
+  - `presentasi.pptx` (slide PowerPoint binary asli via `ppt-rs`, untuk jenis presentasi)
+  - `poster.png`, `ikon-app.png`, `promo.gif` (digambar procedural via canvas RGBA)
+  - `anggaran.csv` (dengan BOM UTF-8 dan format Rupiah)
+  - `memo-sdm.md` & `checklist-ga.csv`
+  - `kode/` (scaffold kode aman dengan README dan sanitasi ketat untuk proyek software)
+- Selalu aman: aplikasi tidak pernah mengeksekusi kode hasil generasi.
 
 ### US-04 — Titah Direksi
-> Sebagai Direktur, saya ingin mengeluarkan perintah yang membuat kantor bereaksi.
+> Sebagai Direktur, saya ingin mengeluarkan perintah manajemen yang memengaruhi perilaku kantor.
 
 **Acceptance:**
-- Tersedia preset: Rapat Dadakan, Potong Budget Kopi, Lembur Malam Ini, Pizza Party, Batik Day, Bebas Seharian, plus input custom bebas.
-- Bawahan merespons dengan bahasa **formal** (ke atasan) untuk 2–4 karyawan terpilih.
-- Setelah itu muncul reaksi **gosip informal** antar sesama karyawan.
-- Efek simulasi nyata: rapat → semua berkumpul di Meeting Room; potong budget → kopi tidak lagi menaikkan mood; pizza → mood naik; dll.
-- Semua tercatat di feed channel "direksi".
+- Titah Rapat Dadakan: seluruh divisi berkumpul di Ruang Meeting.
+- Titah Lembur: mengaktifkan flag lembur malam ini, menaikkan stress agen.
+- Titah Bebas Ngapain Aja: agen bersantai di area lounge/pantry.
+- Titah Potong Budget Kopi: memotong suplai kafein kantor.
 
-### US-05 — Insiden Otomatis
-> Sebagai Direktur, saya ingin drama terjadi sendiri tanpa saya, agar tontonan tetap seru.
-
-**Acceptance:**
-- Insiden acak muncul sesuai jadwal probabilitas: keceplosan chat ke bos, perang AC, reimburse ditolak, printer rusak, KPI reminder, ulang tahun, BSOD.
-- Setiap insiden: dialog multi-karakter + notifikasi toast + efek statistik.
-- Insiden "keceplosan" selalu memicu respon HRD (teguran) dan permintaan maaf formal ke Direktur.
-
-### US-06 — Pesan Suara: Gaul vs Formal
-> Sebagai pemilik perusahaan, saya ingin budaya bicara kantor terjaga: gaul ke teman, formal ke atasan.
+### US-05 — Konfigurasi LLM OpenAI-Compatible
+> Sebagai pengguna, saya dapat menghubungkan LLM favorit saya atau menggunakan mode offline.
 
 **Acceptance:**
-- Sistem tone otomatis berdasar perbandingan level: ke atasan = formal; sesama/ke bawahan = gaul (gaya per kepribadian).
-- Aturan ini tertanam di prompt LLM DAN di bank dialog procedural.
-- Contoh dokumentasi lengkap ada di `docs/RULES.md`.
-
-### US-07 — Konfigurasi LLM Fleksibel
-> Sebagai pengguna teknis, saya ingin memakai endpoint LLM apa pun yang saya punya.
-
-**Acceptance:**
-- Settings: Base URL, API Key, Model, Temperature, Max Tokens, Timeout.
-- Mendukung format OpenAI-compatible `POST {base}/chat/completions`.
-- Tombol Test Koneksi menampilkan OK/error dengan pesan jelas.
-- Di Tauri, request diproxy Rust (bebas CORS). Di browser, via fetch langsung.
-- Config persist (JSON di app config dir / localStorage).
-
-### US-08 — Kontrol Waktu
-> Sebagai Direktur, saya ingin mempercepat/menjeda waktu kantor.
-
-**Acceptance:**
-- Kecepatan 1x/2x/4x/8x/16x + Pause.
-- Jam game + hari ditampilkan di HUD.
-
-### US-09 — Tugas Proyek & Paket Deliverable
-> Sebagai Direktur, saya ingin mengirim satu brief proyek lalu melihat seluruh divisi mengerjakannya, dan menerima paket file nyata di disk yang bisa dibuka dan ditindaklanjuti.
-
-**Acceptance:**
-- 1 proyek aktif; progres 20–40 menit kantor; 5 tonggak feed; paket 8 item + README dijamin; tersimpan otomatis di `Documents\PixelSinergi`; badge sumber LLM/Template; fallback offline selalu siap; proyek kehabisan hari diselesaikan "dikejar deadline" (status `late`).
+- Pengaturan via file JSON di `%APPDATA%\PixelSinergi\settings.json`.
+- Mendukung Base URL, API Key, Model name, Temperature, Timeout, dan offline toggle.
+- Normalisasi endpoint otomatis (`/v1/chat/completions`).
+- Fallback template otomatis jika LLM offline, timeout, atau mengembalikan error.
 
 ## 5. Metrik Keberhasilan
 
 | Metrik | Target |
 |---|---|
-| FPS render saat 10 agen aktif | ≥ 55 FPS di laptop mid-range |
-| Waktu start aplikasi | < 3 detik |
-| Ketersediaan konten tanpa API | Simulasi hidup ≥ 2 jam tanpa pengulangan mencolok |
-| RAM terpakai (Tauri release) | < 120 MB |
-| Ukuran installer Windows | < 20 MB |
-
-## 6. Risiko & Mitigasi
-
-| Risiko | Dampak | Mitigasi |
-|---|---|---|
-| LLM lambat/rate limit | Dialog telat, suasana rusak | Timeout 15s + fallback procedural instan + antrian 1 request |
-| Repetisi dialog offline | Bosan | Bank template besar + pemilihan berbobot + variasi persona |
-| Endpoint non-OpenAI | Setting user gagal | Dokumentasi jelas "OpenAI-compatible only" + test koneksi |
-| Performa render | Lag | Pre-render map & sprite ke offscreen canvas; DOM hanya untuk UI/bubble |
-
-## 7. Rilis
-
-- **v0.1 (MVP)** — Semua US di atas (yang sedang dibangun sekarang).
-- **v0.2 (Backlog)** — Event tanggal merah, cuti bareng, PHK satire, evaluasi tahunan, mode "audit".
+| Runtime footprint | RAM ±60–90 MB, CPU idle < 1% |
+| Ukuran installer MSI | ≤ 4 MB |
+| Startup time | < 1 detik |
+| Test suite | 100% test passing (peta, A*, parser JSON, packaging, PPTX) |
+| Integritas paket deliverable | Semua file teks, CSV, gambar PNG, dan PPTX valid dan dapat dibuka oleh aplikasi OS native |

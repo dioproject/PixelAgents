@@ -4,24 +4,22 @@
 
 Simulasi korporat virtual berbasis **pixel art** di mana kamu berperan sebagai **Direktur Utama (God Mode)**. Kamu memantau kantor dari atas, membaca obrolan antar karyawan AI secara real-time, menyapa tiap divisi, dan mengeluarkan *Titah Direksi* yang bikin seisi kantor heboh.
 
-Dibangun dengan **Tauri 2 (Rust) + Vite + Vanilla JS** — ringan (RAM < 100 MB), tanpa framework berat, dengan render pixel art murni di HTML5 Canvas.
+Dibangun dengan **Rust murni** (`eframe`/`egui` + OpenGL) — ringan (RAM ± 60–90 MB), tanpa JavaScript, tanpa WebView, dengan render pixel art native di GPU.
 
 ---
 
-## 🦀 Versi Native Rust (v1.0 — utama)
+## 🦀 Native Rust (v1.0)
 
-Sekarang ada versi **full Rust** di folder [`native/`](native/): tanpa JavaScript,
-tanpa WebView, memakai `eframe`/`egui` + OpenGL. Fokusnya berubah dari *game*
-menjadi **studio agen AI**: kantor pixel cozy yang mengikuti **jam nyata komputer**
-dan menghasilkan **paket deliverable nyata** (kode, PPTX, poster, GIF, CSV, memo)
-ke `Documents\PixelSinergi`.
+Aplikasi desktop **full Rust**: tanpa JavaScript, tanpa WebView, memakai
+`eframe`/`egui` + OpenGL. Bukan sekadar *game*, melainkan **studio agen AI**:
+kantor pixel cozy yang mengikuti **jam nyata komputer** dan menghasilkan
+**paket deliverable nyata** (kode, PPTX, poster, GIF, CSV, memo) ke
+`Documents\PixelSinergi`.
 
 - 📖 Arsitektur: [`docs/NATIVE.md`](docs/NATIVE.md)
-- ▶️ Jalankan: `cd native && cargo run` (atau `cargo run --release`)
+- ▶️ Jalankan: `cargo run` (atau `cargo run --release`)
 - 📦 Installer: `bash scripts/build-msi.sh` → `dist-installer/PixelSinergi-1.0.0-x64.msi` (≈3.5 MB)
-- 🧪 Test: `cd native && cargo test` · 🖼️ contoh paket: `cargo run -- --gen-sample`
-
-Versi Tauri + Canvas di bawah ini tetap tersedia sebagai referensi/arsip.
+- 🧪 Test: `cargo test` · 🖼️ contoh paket: `cargo run -- --gen-sample`
 
 ---
 
@@ -45,34 +43,36 @@ Versi Tauri + Canvas di bawah ini tetap tersedia sebagai referensi/arsip.
 ## 🚀 Cara Menjalankan
 
 ### Prasyarat
-- [Bun](https://bun.sh) (package manager & runtime script)
-- [Rust toolchain](https://rustup.rs) (untuk Tauri)
-- Windows: WebView2 (biasanya sudah terpasang di Windows 10/11)
+- [Rust toolchain](https://rustup.rs) (stable, edition 2021)
+- Windows: toolchain MSVC + driver OpenGL (bawaan Windows 10/11)
+- Untuk installer `.msi`: WiX Toolset v3 (diunduh otomatis oleh `scripts/build-msi.sh`)
 
-### Development (Browser — paling cepat)
+### Development
 ```bash
-bun install
-bun run dev
-# buka http://localhost:1420
+cargo run                 # jalankan langsung dari root
+cargo run --release       # versi rilis (lebih ringan & cepat)
 ```
-> Di mode browser, call ke LLM langsung via `fetch` (butuh endpoint yang mengizinkan CORS), atau paksa **Mode Offline** di Settings.
 
-### Development (Desktop Tauri)
+### Test
 ```bash
-bun run tauri dev
+cargo test
 ```
-> Di mode desktop, request LLM diproxy oleh backend Rust — bebas masalah CORS.
 
 ### Build Produksi
 ```bash
-bun run tauri build
-# installer di: src-tauri/target/release/bundle/
+cargo build --release
+# exe di: target/release/pixel-sinergi.exe
+```
+
+### Installer .msi (opsional)
+```bash
+bash scripts/build-msi.sh
+# installer di: dist-installer/PixelSinergi-1.0.0-x64.msi
 ```
 
 ### Regenerate icon (opsional)
 ```bash
-bun run icons          # generate assets/logo.png
-cargo tauri icon assets/logo.png
+cargo run -- --gen-icon installer/app.ico
 ```
 
 ---
@@ -115,25 +115,27 @@ PixelAgents/
 │   ├── SCHEMA.md              # Skema data (Agent, Room, FeedEvent, dll)
 │   ├── DESIGN.md              # Panduan desain visual pixel art & UI
 │   ├── ARCHITECTURE.md        # Arsitektur teknis & data flow
-│   └── RULES.md               # Aturan simulasi (tone, rutinitas, insiden)
-├── index.html
-├── package.json
-├── vite.config.js
-├── scripts/
-│   └── gen-icon.mjs           # Generator logo PNG (raw encoder, tanpa dependensi)
+│   ├── RULES.md               # Aturan simulasi (tone, rutinitas, insiden)
+│   └── NATIVE.md              # Arsitektur versi native Rust
+├── Cargo.toml                 # Manifest crate (pixel-sinergi)
+├── assets/
+│   └── fonts/                 # Font pixel (Silkscreen) + rounded (Varela Round)
 ├── src/
-│   ├── main.js                # Bootstrap aplikasi
-│   ├── style.css              # Semua styling UI
-│   ├── core/                  # Config, clock, event bus, utils
-│   ├── engine/                # Canvas renderer, camera, pathfinding, sprite
-│   ├── world/                 # Definisi kantor, tile art, furniture art, scene
-│   ├── agents/                # Roster, agent FSM, perilaku, percakapan, insiden, titah
-│   ├── llm/                   # Client LLM, prompt builder, fallback dialog
-│   └── ui/                    # HUD, feed, bubble, inspector, modal, toast, sfx
-└── src-tauri/                 # Backend Rust (proxy LLM, simpan config)
-    ├── Cargo.toml
-    ├── tauri.conf.json
-    └── src/{main.rs, lib.rs}
+│   ├── main.rs                # Entry point & window (eframe/egui)
+│   ├── theme.rs               # Palet warna, font, gaya egui
+│   ├── office.rs              # Peta kantor, grid walkable, A*
+│   ├── data.rs                # Roster karyawan, bank dialog, template
+│   ├── sim.rs                 # Simulasi real-time (waktu, agen, proyek)
+│   ├── render.rs              # Renderer cozy (lantai, agen, pencahayaan)
+│   ├── imagegen.rs            # Generator poster/ikon/GIF (RGBA)
+│   ├── llm.rs                 # Klien LLM (OpenAI-compatible)
+│   ├── deliver.rs             # Orkestrasi paket deliverable ke disk
+│   └── util.rs                # Helper murni (slug, path, waktu, JSON)
+├── installer/
+│   ├── app.ico
+│   └── pixel-sinergi.wxs      # Definisi MSI (WiX v3)
+└── scripts/
+    └── build-msi.sh           # Bangun installer .msi
 ```
 
 ---

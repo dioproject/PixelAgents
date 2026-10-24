@@ -1,4 +1,4 @@
-# 📜 RULES — Aturan Simulasi Kantor
+# 📜 RULES — Aturan Simulasi Kantor (Native Rust)
 
 Dokumen ini adalah "kitab suci" perilaku seluruh penghuni **PT Pixel Sinergi Nusantara Tbk**.
 
@@ -14,6 +14,8 @@ Dokumen ini adalah "kitab suci" perilaku seluruh penghuni **PT Pixel Sinergi Nus
 | **1** | Junior / Staff | Rian, Fajar, Dimas, Kevin | langsung nama / "bro" |
 
 \* Pemanggilan mengikuti gender: **Pak** untuk pria, **Bu** untuk wanita, **Mas/Mbak** untuk area senior staf, **Kak** untuk lintas divisi yang akrab.
+
+---
 
 ## 2. Matriks Tone Bicara (WAJIB)
 
@@ -41,46 +43,56 @@ jika lawan = Direktur (level 4)          → FORMAL   (selalu, tanpa kecuali)
 > "Faj, honestly aku literally butuh revisi yang lebih... punchy gitu. Which is warnanya kurang oke di feed, ya kan? Thanksss!"
 
 **DOWN — chill (Mas Joko):**
-> "Santai aja bos, dispenser mah gampang. Nanti abis ini gue benerin."
+> "Santai bos, dispenser mah gampang. Nanti abis ini gue benerin."
 
 **DOWN — garing (Bayu):**
 > "Belajar React dulu, baru nanya kenapa state-nya undefined. Wkwk. Sini gue ajarin."
 
-## 3. Rutinitas Harian
+---
+
+## 3. Rutinitas Harian (Jam Nyata OS)
+
+Kantor mengikuti jam nyata komputer pengguna. Semua agen hadir dan pulang sesuai jadwal masing-masing (`arrive_min` dan `leave_min`).
 
 | Jam | Blok | Perilaku Agen |
 |---|---|---|
-| 08:30–09:00 | **Kedatangan** | Berjalan dari lobby ke meja masing-masing, menyalakan laptop |
-| 09:00–12:00 | **Deep Work** | Mengetik di meja; saat kafein menipis (< 1.6) agen berjalan ke pantry, menyeduh kopi, lalu kembali (jeda minimal 45 menit game) |
-| 12:00–13:00 | **Makan Siang** | Semua ke pantry; kursi makan/sofa dipakai bergantian; konteks obrolan `lunch` |
-| 13:00–15:00 | **Kerja Siang** | Kembali mengetik; peluang kecil (±1×/hari per agen) untuk kunjungan lintas divisi |
-| 15:00–15:30 | **Coffee Break** | Gelombang ke pantry untuk ngopi/ngobrol; mood pulih perlahan karena istirahat |
-| 15:30–17:00 | **Capek Sore** | Laju stress naik lebih cepat; dialog beralih ke keluhan |
-| 17:00–18:00 | **Pulang** | Umumnya pulang ke lobby lalu `gone`; divisi IT & GA tetap lembur sampai kantor tutup. Jika flag `overtime` aktif, semua divisi tetap bekerja sampai 18:00. |
-| ≥ 18:00 | **Pergantian Hari** | Hari +1; agen `respawn` di lobby jam 08:30 berikutnya; stress −26, mood +3, kopi +1.5; laporan harian dibuat |
+| **00:00–05:00** | **Dini Hari** | Kantor sunyi. Hanya lampu meja redup dan kucing kantor berkeliaran. |
+| **05:00–07:00** | **Pagi Buta** | Mas Joko (GA) menyalakan lampu. Kru awal mulai tiba. |
+| **07:00–12:00** | **Jam Kerja** | Semua di meja masing-masing. Agen fokus kerja, mood stabil, stress naik perlahan. |
+| **12:00–13:00** | **Istirahat** | Semua ke pantry. Kursi makan/sofa dipakai bergantian. Konteks obrolan: `lunch`. |
+| **13:00–15:00** | **Kerja Siang** | Kembali mengetik. Peluang kecil kunjungan lintas divisi. |
+| **15:00–15:30** | **Coffee Break** | Gelombang ke pantry. Mood pulih perlahan. |
+| **15:30–17:00** | **Capek Sore** | Laju stress naik lebih cepat. Dialog beralih ke keluhan. |
+| **17:00–18:00** | **Jam Pulang** | Umumnya pulang ke lobby lalu keluar. IT & GA tetap lembur. |
+| **≥ 18:00** | **Lembur** | Lampu utama redup + lampu meja hangat. Stress naik, mood turun. |
 
-**Kecepatan default**: 2x → satu hari kantor ≈ 4,7 menit riil.
+---
 
 ## 4. Statistik Agen (Satir)
 
 | Stat | Rentang | Mekanika |
 |---|---|---|
 | **Mood** | 0–100 | Gosip +3 · Kopi +6 (+2 saat budget dipotong) · Pizza +25 · Keceplosan −10 · Insiden lain bervariasi · pulih saat istirahat |
-| **Stress** | 0–100 | Kerja +0.12/menit (blok capek +0.22) · berjalan +0.05 · istirahat +0.01 · Kopi −6 · Keceplosan +30 · KPI +8 |
-| **Coffee** | 0–5 | +1.5 setiap minum kopi (maks 5); −0.008/menit saat kerja, −0.003 saat santai. Agen mencari kopi saat < 1.6. |
-| **Flags** | boolean | `coffeeBudgetCut` · `overtime` · `pizzaPartyActive` · `freeDay` · `batikNext` · `batikActive` · `allGoHome` |
+| **Stress** | 0–100 | Kerja +0.02/detik (blok capek +0.04) · berjalan +0.01 · istirahat +0.005 · Kopi −6 · Keceplosan +30 · KPI +8 |
+| **Coffee** | 0–5 | +1.5 setiap minum kopi (maks 5); −0.004/detik saat kerja, −0.002 saat santai. Agen mencari kopi saat < 1.6. |
+| **Flags** | boolean | `coffeeBudgetCut` · `overtime` · `meeting` · `freeDay` |
 
 Mood dan stress memengaruhi laporan harian serta suasana dialog; tidak ada status permanen.
 
-## 5. Percakapan
+---
 
-1. **Pemicu:** setiap ±15 detik riil (≈30 menit game di 2×), dicoba satu percakapan untuk pasangan agen yang satu ruangan, berjarak < 7 tile, dan tidak sedang berjalan/ngopi/rapat.
-2. **Komposisi:** 2–6 turn, tiap turn ≤ 180 karakter, ala chat WhatsApp kantor (boleh singkatan: "yg", "gmn", "wkwk", "otw", "fyi").
-3. **Konteks** ditentukan ruang + waktu: `pantry` → gosip; meja `it` → kerja/tiket; sore → keluhan; `marketing` → revisi; dekat `finance` → reimburse.
-4. **Prioritas isi**: (a) relevan dengan insiden aktif, (b) relevan dengan titah terakhir (maks 90 menit game terakhir), (c) konteks tempat.
-5. **Efek setelah percakapan:** peserta mood +3, stress −3, `chattedToday` +1.
-6. **Kanal feed:** obrolan kerja → `kerja`; santai/gosip → `gosip`; HRD → `hr`; titah → `direksi`.
-7. **Anti-repetisi:** 8 template terakhir dihindari.
+## 5. Percakapan & Feed Ambient
+
+Percakapan tidak di-generate per frame, melainkan dipicu secara prosedural dari bank dialog (`data.rs`) berdasarkan konteks:
+
+1. **Pemicu:** Interval acak setiap ±45 detik riil (±30 menit game di 2×), dicoba satu percakapan untuk agen yang hadir.
+2. **Konteks** ditentukan ruang + waktu: `pantry` → gosip; meja `it` → kerja/tiket; sore → keluhan; `marketing` → revisi.
+3. **Prioritas isi**: (a) relevan dengan insiden aktif, (b) relevan dengan titah terakhir, (c) konteks tempat.
+4. **Efek setelah percakapan:** peserta mood +3, stress −3.
+5. **Kanal feed:** obrolan kerja → `kerja`; santai/gosip → `gosip`; HRD → `hr`; titah → `direksi`.
+6. **Anti-repetisi:** 8 template terakhir dihindari.
+
+---
 
 ## 6. Insiden (Otomatis)
 
@@ -99,29 +111,35 @@ Sistem melempar dadu setiap **20 menit game** (55% chance) pada pukul **09:15–
 **Cooldown per insiden (menit game):** keceplosan 180 · ac_war 130 · reimburse 130 · printer 130 · kpi 110 · birthday 1440 · bsod 160.
 **Syarat umum**: jam kerja 09:15–16:50, hari ≥ 1, tidak saat rapat darurat/insiden lain masih berjalan.
 
+---
+
 ## 7. Titah Direksi (Player Action)
 
 | Preset | Efek Simulasi | Reaksi Bawahan |
 |---|---|---|
-| **Rapat Dadakan 5 Menit Lagi!** | Semua agen `gather` ke Meeting Room, rapat scripted, lalu bubar | Formal "Siap, Pak" + gosip geram setelahnya |
+| **Rapat Dadakan** | Semua agen `gather` ke Ruang Meeting, rapat scripted, lalu bubar | Formal "Siap, Pak" + gosip geram setelahnya |
 | **Potong Budget Kopi 50%** | Flag `coffeeBudgetCut` sampai pergantian hari; kopi hanya menaikkan mood +2 | Finance formal setuju; IT & Marketing bergosip sedih |
-| **Lembur Malam Ini, Semangat!** | Flag `overtime`; semua divisi tetap bekerja sampai kantor tutup pukul 18:00; stress +8 | "Baik Pak, dedikasi kami untuk perusahaan." (dalam hati: 💀) |
-| **Pizza Party Jam 3!** | Flag `pizzaPartyActive`; semua agen menuju pantry party; mood +25 | Sorak-sorai formal + rencana ambil 2 slice |
-| **Batik Day Besok** | Flag `batikNext` + `batikActive`; semua agen langsung berganti pakaian batik dan tetap memakainya sampai sehari penuh berikutnya, lalu kembali normal | HRD antusias; sisanya "oke Pak" sambil cek lemari |
-| **Bebas Ngapain Aja Seharian** | Flag `freeDay`; planner memilih aktivitas santai (pantry/lounge) | Senang, tapi curiga ini jebakan |
-| **Tugas Proyek Baru** | Brief bebas → `ProjectManager.start`: 1 proyek aktif, semua agen fokus kerja, progres 20–40 menit kantor, 5 tonggak divisi di feed `proyek`, lalu paket file nyata disimpan ke `Documents\PixelSinergi` | Menerima brief sebagai prioritas; hasil dibahas di modal + arsip |
+| **Lembur Malam Ini** | Flag `overtime`; semua divisi tetap bekerja sampai kantor tutup pukul 18:00; stress +8 | "Baik Pak, dedikasi kami untuk perusahaan." (dalam hati: 💀) |
+| **Pizza Party** | Flag `pizzaPartyActive`; semua agen menuju pantry party; mood +25 | Sorak-sorai formal + rencana ambil 2 slice |
+| **Batik Day** | Flag `batikNext` + `batikActive`; semua agen langsung berganti pakaian batik | HRD antusias; sisanya "oke Pak" sambil cek lemari |
+| **Bebas Ngapain Aja** | Flag `freeDay`; planner memilih aktivitas santai (pantry/lounge) | Senang, tapi curiga ini jebakan |
+| **Tugas Proyek Baru** | Brief bebas → `ProjectManager.start`: 1 proyek aktif, semua agen fokus kerja, progres 20–40 menit kantor, 5 tonggak divisi di feed `proyek`, lalu paket file nyata tersimpan di `Documents\PixelSinergi` | Menerima brief sebagai prioritas; hasil dibahas di modal + arsip |
 | **Custom** | Teks bebas → respons formal dari divisi terpilih; tidak mengubah stat secara langsung | 2–4 respons formal (HRD/IT/Marketing/Finance) + gosip lanjutan |
 
 **Aturan respons titah:**
 1. Respons formal muncul di feed channel `direksi`; jika LLM aktif isinya dibuat LLM, jika tidak memakai bank dialog fallback.
-2. Sekitar 5 detik setelah respons (≈10 menit game di 2×), muncul 2–3 baris **gosip informal** antar karyawan (channel `gosip`).
+2. Sekitar 5 detik setelah respons (≈10 menit game di 2×), muncul 2–3 baris **gosip informal** antar sesama karyawan (channel `gosip`).
 3. Titah dicatat di feed dengan style khusus (emas, bullet 📜).
+
+---
 
 ## 8. Etiket Konten (Guardrail)
 
 - Tidak ada ujaran kebencian, SARA, atau pelecehan nyata.
 - "SP" dan "teguran" selalu bernada satir ringan, bukan mengancam nyata.
 - Semua karakter fiktif; kesamaan nama dengan rekan kerja sungguhan adalah kebetulan statistik murni. 😉
+
+---
 
 ## 9. Tugas Proyek (Titah Khusus)
 

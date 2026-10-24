@@ -17,9 +17,9 @@ if [ ! -x "$WIX_DIR/candle.exe" ]; then
 fi
 
 echo "==> Build rilis (Rust)"
-(cd native && cargo build --release)
+cargo build --release
 
-EXE="native/target/release/pixel-sinergi.exe"
+EXE="target/release/pixel-sinergi.exe"
 if [ ! -f "$EXE" ]; then
   echo "!! exe tidak ditemukan: $EXE"; exit 1
 fi

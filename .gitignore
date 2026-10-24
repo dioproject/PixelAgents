@@ -1,16 +1,5 @@
-# Dependencies
-node_modules/
-
-# Build output
-dist/
-assets/logo.png
-
-# Rust / Tauri
-src-tauri/target/
-src-tauri/gen/schemas/
-
-# Native Rust
-native/target/
+# Rust build output
+/target/
 dist-installer/
 tools/wix314/
 tools/*.zip

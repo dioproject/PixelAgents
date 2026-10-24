@@ -6,6 +6,8 @@ Berjalan sebagai *cozy desktop companion*: kantor pixel yang hidup mengikuti
 **jam lokal komputer**, dan agen-agen AI menghasilkan **paket deliverable nyata**
 ke `Documents\PixelSinergi`.
 
+---
+
 ## Kenapa native?
 
 | Aspek | Tauri + Web (versi lama) | Native Rust (versi baru) |
@@ -15,6 +17,8 @@ ke `Documents\PixelSinergi`.
 | Bahasa | JS/TS + Rust | 100% Rust |
 | Installer | `.msi` via Tauri | `.msi` via WiX (3.5 MB) |
 | Grafis | Canvas 2D di browser | painter native + shader-less glow |
+
+---
 
 ## Modul
 
@@ -30,6 +34,8 @@ ke `Documents\PixelSinergi`.
 | `src/llm.rs` | Pengaturan + klien LLM (OpenAI-compatible) + prompt/parser paket |
 | `src/deliver.rs` | Orkestrasi deliverable: dokumen, CSV, code scaffold, PPTX asli, simpan ke disk |
 | `src/util.rs` | Helper murni (slug, sanitasi path, waktu, JSON longgar) |
+
+---
 
 ## Waktu nyata (tanpa percepatan)
 
@@ -55,6 +61,8 @@ terang → sunset → malam), plus *warm desk lamp* radial di tiap meja aktif,
 glow monitor, lampu pantry/direktur, dan langit jendela (bintang saat malam,
 mintik hujan jika hari hujan).
 
+---
+
 ## Siklus proyek
 
 ```
@@ -74,6 +82,8 @@ Jenis proyek dideteksi dari brief: `software`, `presentation`, `campaign`,
 
 Batas aman: **tidak pernah mengeksekusi/meng-compile** kode hasil AI — hanya menulis file.
 
+---
+
 ## Konfigurasi
 
 Settings disimpan di `%APPDATA%\PixelSinergi\settings.json`:
@@ -86,12 +96,13 @@ Settings disimpan di `%APPDATA%\PixelSinergi\settings.json`:
 Tanpa LLM (mode offline / endpoint mati) paket tetap terbit memakai template,
 dengan badge sumber **Template** di modal hasil.
 
+---
+
 ## Build
 
 ```bash
-cd native
 cargo test                 # unit test (peta, A*, parser, PPTX zip, paket lengkap)
-cargo build --release      # exe: native/target/release/pixel-sinergi.exe
+cargo build --release      # exe: target/release/pixel-sinergi.exe
 cargo run -- --gen-sample  # hasilkan contoh paket ke %TEMP%\pixel-sinergi-sample
 cargo run -- --gen-icon installer/app.ico
 

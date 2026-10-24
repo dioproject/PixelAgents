@@ -1,225 +1,122 @@
-# 🏗️ ARCHITECTURE — Arsitektur Teknis
+# 🏗️ ARCHITECTURE — Arsitektur Teknis (Native Rust)
 
-**Stack:** Tauri 2 (Rust) · Vite · Vanilla JS (ESM) · HTML5 Canvas 2D · WebAudio
-**Package manager:** Bun
+**Stack:** Rust 2021 · `eframe`/`egui` (0.37) · OpenGL (`glow`) · `reqwest` · `image` · `ppt-rs`  
+**Platform:** Windows desktop (MSI installer via WiX Toolset v3)  
 
 ---
 
 ## 1. Diagram Tingkat Tinggi
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                        TAURI DESKTOP (Rust)                          │
-│                                                                      │
-│  ┌──────────────┐   invoke()   ┌───────────────────────────────────┐ │
-│  │  WEBVIEW     │ ───────────▶ │  Rust Commands                    │ │
-│  │  (Frontend)  │              │  • llm_chat   (reqwest proxy)     │ │
-│  │              │ ◀─────────── │  • save_config / load_config      │ │
-│  └──────┬───────┘   Result     └───────────────┬───────────────────┘ │
-└─────────┼───────────────────────────────────────┼────────────────────┘
-          │                                       │ HTTPS
-          │ (Fallback browser mode: fetch)        ▼
-          │                              ┌────────────────────┐
-          │                              │  LLM Endpoint      │
-          │                              │  9router / OpenAI  │
-          │                              │  Groq / Ollama ... │
-          │                              │  (OpenAI-compat)   │
-          │                              └────────────────────┘
-          ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                         FRONTEND (Vanilla JS)                        │
-│                                                                      │
-│  ┌────────────┐  ┌─────────────┐  ┌──────────────┐  ┌─────────────┐  │
-│  │ core/      │  │ world/      │  │ engine/      │  │ ui/         │  │
-│  │ config     │  │ office map  │  │ loop 60fps   │  │ hud/feed    │  │
-│  │ clock      │  │ tile art    │  │ camera       │  │ bubbles     │  │
-│  │ bus        │  │ furniture   │  │ pathfinding  │  │ inspector   │  │
-│  │ utils      │  │ scene       │  │ sprites      │  │ modals/toast│  │
-│  └─────┬──────┘  └──────┬──────┘  └──────┬───────┘  └──────┬──────┘  │
-│        │                │                │                 │         │
-│        ▼                ▼                ▼                 ▼         │
-│  ┌──────────────────────────────────────────────────────────────┐    │
-│  │                    SIMULATION CORE (agents/)                 │    │
-│  │  roster → Agent FSM → behavior planner → conversation mgr    │    │
-│  │                    incidents · directives                    │    │
-│  └──────────────────────────┬───────────────────────────────────┘    │
-│                             │                                        │
-│                    ┌────────▼────────┐                               │
-│                    │ llm/ (client,   │                               │
-│                    │ prompts,        │                               │
-│                    │ fallback banks) │                               │
-│                    └─────────────────┘                               │
-└──────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                   PIXEL SINERGI DESKTOP (Native Rust)                   │
+│                                                                        │
+│  ┌─────────────────────────┐           ┌────────────────────────────┐  │
+│  │   UI & Loop (main.rs)   │ ────────▶ │    Simulasi (sim.rs)       │  │
+│  │  • egui Panels          │           │  • Jam Lokal OS (chrono)   │  │
+│  │  • HUD, Feed, Canvas    │           │  • Agen FSM & Pathfinding  │  │
+│  │  • Interaksi Pointer    │           │  • Kucing, Partikel, Cuaca │  │
+│  └────────────┬────────────┘           │  • Siklus Proyek & Tonggak │  │
+│               │                        └─────────────┬──────────────┘  │
+│               ▼                                      │                 │
+│  ┌─────────────────────────┐                         │                 │
+│  │   Renderer (render.rs)  │                         ▼                 │
+│  │  • egui::Painter        │           ┌────────────────────────────┐  │
+│  │  • Peta 96x63 tile      │           │    LLM Client (llm.rs)     │  │
+│  │  • Pencahayaan 24-jam   │           │  • OpenAI-compat POST      │  │
+│  │  • Sprites & Furniture  │           │  • Blocking reqwest+rustls │  │
+│  │  • Speech Bubbles       │           │  • Template fallback       │  │
+│  └─────────────────────────┘           └─────────────┬──────────────┘  │
+│                                                      │                 │
+│                                                      ▼                 │
+│                                        ┌────────────────────────────┐  │
+│                                        │   Deliverable (deliver.rs) │  │
+│                                        │  • imagegen.rs (PNG/GIF)   │  │
+│                                        │  • ppt-rs (PPTX binary)    │  │
+│                                        │  • Sanitasi Path & Kode    │  │
+│                                        │  • Tulis ke Dokumen OS     │  │
+│                                        └─────────────┬──────────────┘  │
+└──────────────────────────────────────────────────────┼─────────────────┘
+                                                       ▼
+                                    ┌────────────────────────────────────┐
+                                    │ Documents\PixelSinergi\<paket>\    │
+                                    │ • laporan.md    • poster.png       │
+                                    │ • presentasi.pptx • ikon-app.png   │
+                                    │ • anggaran.csv  • kode/ (scaffold) │
+                                    └────────────────────────────────────┘
 ```
+
+---
 
 ## 2. Modul & Tanggung Jawab
 
-| Modul | Tanggung Jawab | Tidak Boleh |
+| File / Modul | Tanggung Jawab | Batasan / Larangan |
 |---|---|---|
-| `core/config` | Load/save Settings (Tauri config dir ↔ localStorage), nilai default | Tahu soal render |
-| `core/clock` | Waktu game (menit/hari), kecepatan, pause, konversi jam | Tahu soal agen |
-| `core/bus` | Pub/sub event internal (`feed:add`, `toast`, `select-agent`, ...) | Menyimpan state domain |
-| `core/utils` | Helper murni: rand, clamp, choice, format, escapeHtml | Efek samping |
-| `world/office` | **Satu-satunya sumber kebenaran** peta: rooms, furniture, seats, hotspot, grid walkable, roomAt() | Menggambar |
-| `world/tiles` + `world/furnitureArt` | Fungsi painter tile/furniture (gambar ke ctx 16px-scale) | Tahu posisi agen |
-| `world/scene` | Pre-render seluruh peta ke offscreen canvas sekali; `draw(ctx, camera)` per frame | Update simulasi |
-| `engine/camera` | x/y/zoom, clamp ke batas peta, pan drag, zoom wheel, `worldToScreen()` | Menggambar UI |
-| `engine/pathfinding` | A* 4-arah di grid; `nearestWalkable()` | Tahu apa pun tentang agen |
-| `engine/sprites` | Definisi matriks sprite + palet; pre-render frame per agen; `drawAgent()` | Logika AI |
-| `engine/loop` | rAF loop: `update(dt)` → `render()` → `updateDom()`; meter FPS | Leadership logic |
-| `agents/roster` | Data statis 10 karyawan + direktur | Runtime mutable |
-| `agents/agent` | Class Agent: posisi, path following, FSM aktivitas, stats, bubble | Memanggil LLM langsung |
-| `agents/behavior` | Planner: memilih aktivitas per agen berdasar jam kerja + kondisi; menjalankan walk; mengatur pulang/lembur | Menyusun dialog |
-| `agents/conversation` | Orkestrasi percakapan: pilih pasangan, susun turn (LLM/fallback), jadwalkan bubble + feed, lepas agen | Menyentuh canvas |
-| `agents/incidents` | Timer & roll insiden acak, membangun skrip insiden (atau LLM), efek stats/toast | Menggerakkan agen langsung (delegasi ke agent/behavior) |
-| `agents/directives` | Preset titah, efek simulasi (gather/stat/flag), panggil conversation untuk reaksi | — |
-| `agents/projects` | Orkestrasi Tugas Proyek: state 1 aktif, progres + tonggak, konten & kode (LLM/fallback), poster, simpan paket, arsip | Menjalankan/meng-compile kode hasil AI |
-| `artifacts/files` | Builder teks murni: `laporan.md`, CSV (BOM `;`), caption, memo | DOM/network |
-| `artifacts/code` + `artifacts/templates` | Sanitasi & normalisasi file kode (14 file · 24 KB · 160 KB · depth 4) + scaffold fallback valid | Mengeksekusi kode |
-| `artifacts/poster` | Render poster 1080² & ikon 512² ke PNG dataURL (canvas) | Menyimpan file |
-| `src-tauri/src/lib.rs` | Command Rust: `llm_chat` (proxy CORS), `save_config`/`load_config`, `save_project_package` (sanitasi + tulis paket ke Documents), `open_path` | Logika bisnis JS |
-| `llm/client` | `chat()` (Tauri invoke atau fetch), antrian 1 in-flight, timeout, `testConnection()` | Tahu konteks bisnis |
-| `llm/prompts` | Builder system prompt + few-shot + parser JSON multi-speaker | Network |
-| `llm/fallback` | Bank dialog procedural (template percakapan, reaksi, insiden) | Network |
-| `ui/*` | DOM: topbar, sidebar, feed, bubble, inspector, modal, toast, sfx | State domain (hanya baca lewat API sim) |
+| `src/main.rs` | Entry point aplikasi, inisialisasi window `eframe`, loop event UI, mode CLI (`--gen-sample`, `--gen-icon`) | Tidak menyimpan logika komputasi simulasi langsung |
+| `src/theme.rs` | Palet warna (BG, PANEL, ACCENT, SAGE, TEAL, dll), font embedded (Silkscreen, Varela Round) | Tidak memuat aset eksternal dinamis di luar binary |
+| `src/office.rs` | Sumber kebenaran peta: ukuran grid 96×63, definisi ruangan, furniture, kursi (seats), hotspot interaksi, grid walkable, dan pathfinding A* 4-arah | Tidak melakukan operasi rendering layar |
+| `src/data.rs` | Roster statis 10 karyawan + direktur, bank dialog per channel ambient, deteksi tipe brief (`detect_kind`, `detect_stack`), template deliverable | Data konstan / *read-only* |
+| `src/sim.rs` | State mesin simulasi real-time: jam lokal OS, fase waktu 24-jam, pergerakan agen, kucing kantor, emisi partikel, feed event, dan manajemen siklus proyek | Tidak memanggil thread rendering langsung |
+| `src/render.rs` | Visualisasi visual kantor: lantai checker, dinding & pintu, furniture procedural, sprite agen & kucing, siklus pencahayaan langit & meja, balon kata, dan interaksi pick | Hanya menggambar via `egui::Painter` |
+| `src/imagegen.rs` | Kanvas memori RGBA (`Canvas`): perender poster beresolusi tinggi (1080×1080), ikon aplikasi (512×512 & .ico 256×256), dan frame animasi promo GIF | Bebas dependensi GPU (murni CPU image buffer) |
+| `src/llm.rs` | Pengaturan LLM (`Settings`), pembaca/penyimpan `%APPDATA%\PixelSinergi\settings.json`, klien chat HTTP kompatibel OpenAI, prompt engineering proyek, dan parser respons | Tidak memblokir UI thread untuk pekerjaan panjang |
+| `src/deliver.rs` | Orkestrator berkas hasil deliverable: penggabungan data LLM/template, pembuatan Markdown, CSV ber-BOM, file slide binary PPTX, pembentukan struktur kode software, dan penulisan aman ke disk | Tidak mengeksekusi atau mengompilasi kode hasil generasi |
+| `src/util.rs` | Helper murni: sanitasi slug folder, sanitasi path relasional (`sanitize_rel_path`), interpolasi linier warna, dan extractor blok JSON | Fungsi murni tanpa efek samping ke I/O |
 
-## 3. Loop Simulasi (60 FPS)
+---
+
+## 3. Sistem Waktu & Simulasi Jam Komputer
+
+Simulasi tidak menggunakan percepatan buatan sebagai mode utama, melainkan mengikatkan diri langsung ke jam lokal sistem operasi pengguna (`chrono::Local::now()`):
 
 ```
-requestAnimationFrame(dt)
- └─ if (!paused):
-     simMin = clock.tick(dt)                  // += dt * speed / MS_PER_MIN
-     for agent of agents: agent.update(dt, simMin)
-        ├─ walk: ikuti path (speed 42 px/s), set frame walkA/B
-        ├─ stats: stress/coffee/mood drift berdasar aktivitas & flags
-        └─ animasi: ganti frame berdasar animT
-     behavior.plan(agents, clock)             // tiap agen idle → pilih aktivitas
-     conversation.update(nowMs)               // tayangkan turn, kelola bubble
-     incidents.update(simMin)                 // roll & trigger
-     directives.update(simMin)                // efek gather selesai → jalankan skrip
- render:
-     scene.draw(ctx, camera)                  // offscreen pre-rendered map
-     agents sorted by py → drawAgent()
-     camera smooth-follow jika ada target
- uiFrame:
-     bubbles.reposition()                     // DOM bubble mengikuti kamera
-     hud.tick()                               // jam, fps, stats sidebar
+00:00–05:00  Dini Hari    → Kantor sunyi, sebagian besar agen pulang, lampu meja redup.
+05:00–07:00  Pagi Buta    → Mas Joko (GA) menyalakan lampu, kru awal mulai tiba.
+07:00–12:00  Jam Kerja    → Semua agen berada di meja masing-masing, produktivitas tinggi.
+12:00–13:00  Istirahat    → Pantry ramai untuk makan siang dan obrolan kasual.
+13:00–17:00  Sore         → Deep work sesi kedua, kopi break sore di pantry.
+17:00–18:00  Jam Pulang   → Tas dirapikan, sebagian besar agen meninggalkan kantor via lobby.
+18:00–23:59  Lembur       → Lampu utama redup, lampu meja hangat menyala untuk tim lembur (IT/Finance).
 ```
 
-### Konversi waktu
-- `1 game-minute = 1000 ms wall-clock / speed` (speed 2 → hari 08:30–18:00 ≈ 4.7 menit riil).
-- `MS_PER_MIN = 1000` konstanta tunggal; dipakai clock & scheduler.
+### Lingkungan & Pencahayaan 24 Jam
+`render.rs` menghitung gradasi langit luar jendela dan *ambient tint* kantor berdasarkan nilai desimal jam (`hour_float`). Meja agen yang aktif memiliki *warm desk lamp radial glow*, lampu monitor berpendar halus, dan jendela menampilkan bintang saat malam atau mintik hujan ketika flag cuaca hujan aktif.
 
-## 4. Alur Percakapan (LLM + Fallback)
+---
 
-```
-conversation.tryStartPair()
- ├─ kumpulkan kandidat: 2 agen, activity ∈ {work, idle, slack}, satu ruangan, jarak < 7 tile,
- │  tidak sedang berjalan/ngopi/rapat
- ├─ tentukan konteks (ruang + jam): gosip / kerja / lunch / curhat
- ├─ template fallback SELALU disiapkan (instan)
- └─ jika LLM aktif & antrian kosong:
-      turnA = mulai typing bubble (…)
-      LLM chat(prompt) ──sukses──▶ parse JSON ──valid──▶ turns
-                       └─timeout/gagal──▶ fallback
-      ganti typing dengan skrip hasil
- setAgentTalking(a,b); jadwalkan turn tiap 1.5–4.8 s
- ├─ tiap turn: bubble.show(speaker, text) + bus.emit('feed:add')
- └─ selesai: release agen, stats.mood += 3, chattedToday++
-```
+## 4. Siklus Proyek & Pembuatan Paket Deliverable
 
-- **Antrian global LLM = 1 request** agar endpoint tidak dibombardir; konvoi lain memakai fallback.
-- **Timebox**: konvoi maksimum 6 turn; timeout LLM 20 s (di bawah timeout HTTP 45 s Settings).
-- **Rate limiter**: maksimum 1 percakapan LLM per 45 detik wall-clock; sisanya fallback.
+1. **Trigger**: Direktur mengirimkan brief melalui perintah proyek (`sim.start_project(brief)`).
+2. **Analisis Brief**:
+   - `data::detect_kind(brief)` menentukan kategori: `software`, `presentation`, `campaign`, `document`, atau `generic`.
+   - `data::detect_stack(brief)` menentukan kerangka teknologi: `tauri`, `vite`, `python`, `react`, dsb.
+3. **Pengerjaan Terlihat**:
+   - Status proyek `ProjStatus::Running` mengunci agen di meja masing-masing (fokus proyek).
+   - 5 tonggak divisi tercapai secara berkala (20%, 36%, 52%, 68%, 84%) dan disiarkan ke feed `proyek`.
+4. **Penyusunan Paket (Worker Thread)**:
+   - Konten teks dihasilkan via LLM (jika endpoint siap) atau template prosedural.
+   - Aset visual diproduksi oleh `imagegen.rs` (poster PNG, ikon aplikasi, promo GIF).
+   - Slide presentasi diproduksi ke format PPTX asli melalui pustaka `ppt-rs`.
+   - Berkas kode scaffold dirapikan dan disanitasi ketat.
+5. **Persistensi ke Disk**:
+   - Seluruh artefak ditulis ke `%USERPROFILE%\Documents\PixelSinergi\<tanggal> - <slug>\`.
+   - Hasil disimpan ke arsip internal aplikasi (`sim.archive`).
 
-## 5. Proxy LLM (Rust)
+---
 
-```
-Frontend ──invoke("llm_chat", {base_url, api_key, model, messages, ...})──▶
- Rust: normalize URL (tambah /chat/completions jika belum)
-       POST JSON {model, messages, temperature, max_tokens}
-       header Authorization: Bearer <api_key> (jika ada)
-       timeout (default 45 s)
- ◀── Ok(content) | Err("HTTP 401: ...") 
-```
+## 5. Keamanan & Batasan Berkas (Hard Guardrails)
 
-Keuntungan: **bebas CORS**, API key tidak pernah menyentuh kode web, timeout terkontrol.
-Di mode browser dev: `fetch()` langsung (butuh CORS endpoint atau mode offline).
+Untuk menjaga keamanan komputer pengguna:
+- **Zero Execution**: Aplikasi tidak pernah menjalankan perintah terminal, script compiler, runtime node, atau binary hasil generasi AI.
+- **Path Sanitization**: `util::sanitize_rel_path` memvalidasi setiap path file dalam paket. Percobaan traversal seperti `../`, path absolut, karakter ilegal Windows (`:`, `*`, `?`, `"`, `<`, `>`, `|`), serta kedalaman lebih dari batas aman akan otomatis ditolak.
+- **Kapasitas Kode**: Maksimal 40 berkas, ukuran maksimal per berkas 60 KB, total paket kode tidak melebihi 400 KB.
 
-## 6. Persistensi
+---
+
+## 6. Persistensi & Konfigurasi
 
 | Data | Lokasi | Format |
 |---|---|---|
-| Settings | Tauri: `%APPDATA%/com.pixelsinergi.corporate/config.json` · Browser: `localStorage` | JSON |
-| Sim state | In-memory (reset tiap buka) | — |
-
-## 7. Performa
-
-| Teknik | Alasan |
-|---|---|
-| Pre-render peta statis (1536×1008 offscreen) | 1 `drawImage` per frame alih-alih ribuan `fillRect` |
-| Pre-render frame sprite per agen (offscreen) | 12×18 = 216 rect → 1 drawImage |
-| DOM hanya untuk UI/bubble/label | Teks tetap tajam & aksesibel tanpa raster font |
-| Feed maks 400 node | DOM tetap ringan walau berjalan berjam-jam |
-| Sorting 10 agen per frame | Trivial; tidak perlu optimasi |
-| `imageSmoothingEnabled=false` + zoom integer | Pixel art tajam khas retro |
-
-## 8. Struktur Folder (Final)
-
-```
-PixelAgents/
-├─ index.html
-├─ package.json / vite.config.js / .gitignore
-├─ scripts/gen-icon.mjs
-├─ docs/ (PRD, SCHEMA, DESIGN, ARCHITECTURE, RULES)
-├─ src/
-│  ├─ main.js · style.css
-│  ├─ core/   {config, clock, bus, utils}.js
-│  ├─ engine/ {camera, pathfinding, sprites, loop}.js
-│  ├─ world/  {office, tiles, furnitureArt, scene}.js
-│  ├─ agents/ {roster, agent, behavior, conversation, incidents, directives, projects}.js
-│  ├─ llm/    {client, prompts, fallback}.js
-│  ├─ artifacts/ {files, code, templates, poster}.js
-│  └─ ui/     {hud, feed, bubbles, inspector, modals, toast, sfx}.js
-└─ src-tauri/
-   ├─ Cargo.toml · build.rs · tauri.conf.json
-   ├─ capabilities/default.json
-   ├─ icons/            (hasil `cargo tauri icon`)
-   └─ src/{main.rs, lib.rs}
-```
-
-## 9. Build & Rilis
-
-```bash
-bun install            # dependensi frontend
-bun run dev            # dev server (browser)  :1420
-bun run tauri dev      # dev desktop (Rust + webview)
-bun run tauri build    # produksi → installer .msi/.exe
-```
-
-- `beforeDevCommand: bun run dev`, `devUrl: http://localhost:1420`
-- CSP nonaktif (konten 100% lokal); network hanya lewat Rust command.
-
-## 10. Alur Tugas Proyek (Paket Deliverable)
-
-```
-Titah "Tugas Proyek Baru" (brief) → DirectiveSystem.send('proyek', text)
-  → ProjectManager.start(): 1 proyek aktif; semua agen difokuskan (behavior)
-  → update(gameMinutes): progres + 5 tonggak divisi (feed `proyek`)
-  → pct 100% → complete():
-       A) generateContent : prompt LLM (maxTokens 2000) → parseProjectContent
-                            → mergeProjectContent(parsed, bank fallback)
-       B) generateCode    : prompt LLM (maxTokens 8000) → parseProjectCode
-                            → normalizeCodeFiles (14 file / 24 KB / 160 KB / depth 4)
-                            → fallback template + README dijamin
-       → renderPoster / renderAppIcon (canvas → PNG dataURL)
-       → savePackage: Tauri invoke `save_project_package` → Documents\PixelSinergi\<folder>
-                      (browser dev: unduhan terpisah, folderPath = null)
-  → arsip + auto-buka modal hasil (hanya bila tidak ada modal lain terbuka)
-
-Rollover 18:00 saat proyek masih jalan → finalizeLate():
-  statistik hari itu dihitung sinkron → complete({ late: true })
-  → konten & kode template + status 'late' + disclaimer di laporan.md
-
-Batas aman: aplikasi TIDAK PERNAH mengeksekusi/meng-compile kode hasil AI — hanya menulis file.
-```
+| Konfigurasi & LLM | `%APPDATA%\PixelSinergi\settings.json` | JSON |
+| Paket Deliverable | `%USERPROFILE%\Documents\PixelSinergi\` | Folder berkas nyata |
+| State Simulasi & Feed | In-memory RAM (reset bersih saat aplikasi dibuka ulang) | Rust Structs |

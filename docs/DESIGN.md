@@ -1,159 +1,83 @@
-# 🎨 DESIGN — Panduan Visual & Audio
+# 🎨 DESIGN — Panduan Visual & Renderer (Native Rust)
 
-**Gaya:** Top-down 2D pixel art (16-bit modern), palet terbatas, tanpa anti-aliasing.
-**Resolusi basis:** 1 tile = **16 px** logis. Zoom kamera: 2x (default), 3x, 4x. `imageSmoothingEnabled = false` wajib.
+**Gaya:** Top-down 2D pixel art retro modern, palet warna cozy, outline tegas tanpa anti-aliasing.  
+**Basis Grid:** 1 tile = **18.0 px** layar (konstanta `BASE_TILE`).  
+**Renderer:** `egui::Painter` berbasis OpenGL shader (`glow`) + Kanvas CPU RGBA (`imagegen.rs`) untuk pembuatan berkas biner gambar.  
 
 ---
 
-## 1. Palet Warna Global
+## 1. Palet Warna Cozy (`src/theme.rs`)
 
-### Netral & UI
-| Nama | Hex | Pemakaian |
+### Latar & UI
+| Warna | Hex / RGB | Pemakaian |
 |---|---|---|
-| Ink | `#14151f` | Outline semua sprite, teks |
-| UI BG | `#101218` | Latar aplikasi |
-| Panel | `#1a1e2a` | Sidebar, modal |
-| Border | `#2c3346` | Garis panel |
-| Text | `#e8ecf4` | Teks utama |
-| Text dim | `#8b93a7` | Teks sekunder |
-| Accent (amber) | `#ffc857` | Aksen, jam, tombol aktif |
-| Danger | `#ff6b6b` | HR alert, stress |
-| Success | `#7ee787` | OK, mood naik |
+| `BG` | `#1c171f` | Latar luar aplikasi |
+| `PANEL` | `#272029` | Background panel HUD & sidebar feed |
+| `PANEL_2` | `#332a34` | Panel sekunder / card background |
+| `PANEL_3` | `#3f343f` | Elemen interaktif saat hover |
+| `BORDER` | `#4c3e49` | Garis pembatas panel |
+| `BORDER_2` | `#63515d` | Garis aksen / separator |
+| `TEXT` | `#f3e8d8` | Teks utama (warm white) |
+| `TEXT_DIM` | `#b9a392` | Teks sekunder (sub-keterangan) |
+| `TEXT_FAINT`| `#8b786c` | Teks pudar / petunjuk bantuan |
+| `INK` | `#161218` | Warna outline sprite dan teks gelap |
 
-### Dinding & Koridor
-| Elemen | Hex |
-|---|---|
-| Wall face | `#363b4d` |
-| Wall top (highlight) | `#4a4f63` |
-| Baseboard | `#2a2e3d` |
-| Corridor floor | `#3a3f52` / checker `#343948` |
-
-### Lantai per Ruangan (base / checker / aksen)
-| Ruangan | Base | Checker | Aksen |
-|---|---|---|---|
-| IT & Engineering | `#2f3a4f` | `#283245` | Kabel merah `#c8553d` |
-| Marketing | `#6b4a56` | `#5f414c` | Rug pink `#d87a9b` |
-| Finance | `#3d4d3f` | `#354438` | Dokumen krem `#e9dfc2` |
-| HRD | `#2f4a4a` | `#284040` | Karpet teal `#4a8a8a` |
-| GA | `#4d4733` | `#443f2d` | Pita hazard kuning |
-| Pantry | `#5a4632` | `#4e3c2b` | Ubin dapur `#8a7355` |
-| Meeting | `#454a5e` | `#3d4254` | Karpet biru navy |
-| Director | `#5c2f3a` | `#522a34` | Trim emas `#c9a227` |
-| Lobby | `#4a4f63` | `#424759` | Logo perusahaan |
-
-## 2. Karakter
-
-### Anatomi Sprite
-- Ukuran frame: **12 × 18 px** (termasuk rambut & sepatu), anchor di tengah-bawah.
-- Lapisan: rambut → wajah → badan → lengan → celana → sepatu. Outline `#14151f` di siluet.
-- Mata: 1 px hitam (`#14151f`); varian "ngantuk" = garis horizontal.
-
-### Frame Animasi (per agen, pre-render ke offscreen canvas)
-| Frame | Keterangan |
-|---|---|
-| `idle1` / `idle2` | Napas: badan naik 1 px, bergantian tiap 600 ms |
-| `walkA` / `walkB` | Kaki bergantian tiap 180 ms |
-| `type1` / `type2` | Duduk mengetik, tangan kanan turun-naik |
-| `drink` | Menyeruput kopi (1 frame + efek uap) |
-| `sit1` | Duduk santai (kursi/sofa) |
-| `shock` | Kedua tangan ke atas + mata besar (untuk keceplosan) |
-| `sleep` | Kepala rebah ke layar (untuk lembur parah) |
-
-### Warna Khas per Divisi
-| Divisi | Atasan/warna baju | Bawahan |
+### Aksen & Status
+| Warna | Hex / RGB | Pemakaian |
 |---|---|---|
-| IT | Hoodie abu-biru `#7a8ba8` | Hoodie gelap `#5c6b85` |
-| Marketing | Blazer pink `#d86b8f` | Kaos putih `#e8e8ee` + aksen `#c9556e` |
-| Finance | Kemeja putih `#e8e8ee` + dasi `#7a3b4f` | Kemeja krem `#ded6c3` |
-| HRD | Blazer teal `#4a8a8a` | Blazer muda `#6aa8a0` |
-| GA | Polo mustard `#d0a139` | Apron abu `#9a9a9a` |
-| Direktur | Jas gelap `#2b2f3d` + dasi merah `#c8553d` | — |
+| `ACCENT` | `#e87a52` (terracotta) | Aksen utama tombol, sorotan aktif |
+| `ACCENT_2` | `#f0b357` (gold) | Indikator jam, kanal direksi |
+| `SAGE` | `#9d408c` | Indikator kondisi normal |
+| `TEAL` | `#7ec9c0` | Aksen sejuk / pantry |
+| `PINK` | `#e09ab0` | Aksen marketing |
+| `LAV` | `#b3a4d4` | Aksen malam hari |
+| `DANGER` | `#e06a6a` | Peringatan darurat, stres tinggi |
+| `SUCCESS` | `#8fc07a` | Status proyek berhasil |
 
-## 3. Furniture (Procedural, digambar via rect 1 px)
+---
 
-| Type | Ukuran | Ciri |
-|---|---|---|
-| `desk` | 2×1 | Kayu coklat, monitor gelap + glow biru saat aktif, keyboard |
-| `deskL` | 3×1 | Varian panjang (marketing: + tripod kamera) |
-| `roundTable` | 3×3 | Meja bulat meeting + 8 kursi di keliling |
-| `longTable` | 4×2 | Meja makan pantry, kayu terang |
-| `sofa` | 2×1 | Sofa kantor abu; `armchair` 1×1 |
-| `counter` | 4×1 | Kitchen set + sink; `coffeeMachine` 1×1 hitam-merah + uap |
-| `fridge` | 1×2 | Kulkas putih 2 pintu |
-| `dispenser` | 1×1 | Galon biru di atas |
-| `vendingMachine` | 1×2 | Mesin snack, lampu kedip |
-| `serverRack` | 1×2 | Rak server + lampu LED hijau kedip |
-| `filingCabinet` | 1×1 | Lemari arsip abu |
-| `printer` | 1×1 | Mesin fotokopi + tumpukan kertas |
-| `whiteboard` | 3×1 | Papan putih + coretan marker |
-| `posterWall` | 3×1 | Wall item: poster/dashboard marketing |
-| `acUnit` | 2×1 | Wall item AC + lampu indikator |
-| `cctv` | 1×1 | Wall item kamera CCTV |
-| `projectorScreen` | 3×1 | Wall item layar proyektor |
-| `plant` / `plantBig` | 1×1 / 2×2 | Tanaman hijau pot terakota |
-| `poolTable` | 4×2 | Meja biliar lounge |
-| `workbench` | 3×1 | Meja kerja GA + toolbox + kotak dus |
-| `receptionDesk` | 3×1 | Meja resepsionis + logo |
-| `beanbag` | 1×1 | Beanbag IT |
-| `coffeeStain` | 1×1 | Dekorasi: noda kopi misterius di karpet |
+## 2. Tipografi (`src/theme.rs`)
 
-**Aturan:** outline `#14151f` 1 px mengelilingi bentuk; shading bawah-kanan 1 shade lebih gelap; highlight atas 1 px lebih terang.
+Font dibundel langsung ke dalam binary aplikasi (*statically embedded* via `include_bytes!`):
 
-## 4. UI Layout (God Mode Dashboard)
+1. **Pixel Typography (`assets/fonts/Silkscreen-Regular.ttf` & `Silkscreen-Bold.ttf`)**:
+   - Digunakan untuk heading HUD, judul ruangan, jam, dan teks bernuansa retro.
+   - Dipanggil via helper `theme::pixel(size)` dan `theme::pixel_bold(size)`.
+2. **Body Typography (`assets/fonts/VarelaRound-Regular.ttf`)**:
+   - Digunakan untuk feed, keterangan dialog, dan teks konten agar nyaman dibaca pada ukuran kecil.
+   - Dipanggil via helper `theme::body(size)`.
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│ TOPBAR  [🏢 PT Pixel Sinergi Nusantara Tbk]   Hari 1 · 09:12  [⏸][2x▾] │
-│         [📜 Titah Direksi]  [⚙️ Settings]  [❓]                         │
-├────────────┬───────────────────────────────────────────┬───────────────┤
-│ CCTV NAV   │                                            │ OFFICE FEED   │
-│ ▸ IT       │              CANVAS PIXEL                  │ [All][Kerja]  │
-│ ▸ Meeting  │        (bubble DOM di atas canvas)         │ [Gosip][HR]   │
-│ ▸ Direktur │                                            │ 09:12 Bayu:   │
-│ ▸ Finc     │                                            │  "..."        │
-│ ▸ Mktg     │                                            │               │
-│ ▸ Pantry   │                                            ├───────────────┤
-│ ▸ HRD/GA   │                                            │ KARYAWAN (10) │
-│            │                                            │ ● Bayu  Ngetik│
-│ STATS      │                                            │ ● Jessica ... │
-│ Stress ▓▓  │                                            │               │
-│ Kopi ☕ 12 │                                            │               │
-└────────────┴───────────────────────────────────────────┴───────────────┘
-```
+---
 
-- **Topbar**: tinggi 48 px, latar `#1a1e2a`, jam monospace amber.
-- **Sidebar kiri** 200 px: tombol CCTV per ruangan (klik = kamera zoom + pan), statistik kantor live.
-- **Sidebar kanan** 300 px: tab feed + daftar karyawan (dot status aktivitas).
-- **Inspector**: menggantikan sidebar kanan saat agen dipilih (tombol ✕ untuk kembali).
-- **Bubble**: rounded 8 px, bg `#1a1e2a` 95% + border 2 px warna divisi, tail 6 px, font 12 px; nama pengirim kecil di atas teks untuk konteks feed.
-- **Overlay CCTV**: scanline halus (opacity 4%), vignette, label ruangan chip kecil kiri-atas; sudut kanan-atas `● REC` merah berkedip pelan.
+## 3. Sistem Pencahayaan Dinamis 24-Jam (`src/render.rs`)
 
-## 5. Tipografi
+Pencahayaan ruangan disesuaikan secara dinamis dengan jam komputer pengguna:
 
-| Elemen | Font |
-|---|---|
-| UI umum | `Segoe UI`, system-ui, sans-serif |
-| Jam, angka stats, kode | `Consolas`, `ui-monospace`, monospace |
-| Judul panel | UI umum, 600, letter-spacing 0.5px, UPPERCASE 11px |
+1. **Langit Jendela (`draw_windows`)**:
+   - Gradien langit dihitung dari jam desimal (`sky_gradient(hour)`): indigo malam $\rightarrow$ fajar ungu $\rightarrow$ biru siang $\rightarrow$ jingga sore $\rightarrow$ biru tua malam.
+   - Bintang berkedip halus pada malam hari.
+   - Efek garis hujan vertikal saat kondisi cuaca hujan aktif.
+2. **Ambient Room Tint (`ambient_tint`)**:
+   - Lapisan pewarnaan global yang diinterpolasi melintasi keyframe 24 jam untuk menghasilkan atmosfer kantor yang hangat dan hidup.
+3. **Lampu Meja & Layar Monitor (`draw_lighting`)**:
+   - Radial soft glow di atas meja agen yang sedang bekerja (efek lampu meja kerja hangat).
+   - Glow lembut pada layar monitor yang menyala.
 
-> Tidak ada webfont eksternal → aplikasi tetap ringan & offline-first.
+---
 
-## 6. Sound Design (Procedural WebAudio — tanpa file)
+## 4. Karakter & Animasi Sprite (`src/render.rs`)
 
-| SFX | Karakter | Trigger |
-|---|---|---|
-| `blip` | Beep pendek 880 Hz, 60 ms | Pesan feed baru |
-| `alert` | Dua nada turun (660→440) | HR Alert / SP |
-| `chime` | Tiga nada naik | Titah Direksi dikirim |
-| `sip` | Noise burst pendek low-pass | Agen minum kopi |
-| `cash` | Klik tinggi 1200 Hz | Insiden reimburse |
+- Karakter digambar secara prosedural per layer menggunakan primitif painter `egui` (kaki, celana, baju, kepala, rambut, dan aksesoris).
+- Arah hadap: `'u'` (atas), `'d'` (bawah), `'l'` (kiri), `'r'` (kanan).
+- Animasi langkah kaki berbasis fase berjalan (`walk_phase`) yang menggerakkan offset kaki secara bergantian.
+- Posisi duduk menyesuaikan arah kursi meja kantor.
 
-Semua di-toggle dari Settings (`soundEnabled`). Volume dijaga ≤ 0.2 agar tidak mengganggu.
+---
 
-## 7. Tone of Voice (Konten)
+## 5. Generator Gambar CPU (`src/imagegen.rs`)
 
-- **Ke atasan (level kita lebih rendah):** "Selamat pagi, Pak Direktur. Mohon izin menyampaikan..." — formal, lengkap, diplomatis.
-- **Sesama level:** "Woi, jadi ga nih? Wkwk." — gaul, singkat, boleh typo ringan.
-- **Ke bawahan:** sesuai `downTone` (sweet/ jaksel / chill / garing).
-- **Sistem & HR:** kalimat korporat satir yang kaku, boleh megaphone 📢 dan emoji terbatas.
-- **Larangan:** sarkasme kasar, konten SARA, kata kotor berat — tetap aman untuk semua umur.
+Untuk menghasilkan deliverable berupa berkas biner nyata tanpa dependensi GPU:
+- Struct `Canvas`: Framebuffer RGBA murni di memori RAM dengan fungsi rasterisasi (garis, kotak, lingkaran, teks via `fontdue`).
+- `render_poster`: Menghasilkan poster proyek beresolusi tinggi (1080×1080 px) lengkap dengan header, diagram, dan footer.
+- `render_icon`: Menghasilkan ikon aplikasi 512×512 px dengan rounded corner mask dan export ke format ICO/PNG.
+- `render_promo_gif`: Mengompilasi rangkaian frame animasi ke format berkas GIF bergerak.
