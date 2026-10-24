@@ -128,15 +128,17 @@ pub fn chat(
             }
         }
     };
-    let body = serde_json::json!({
+    let mut body = serde_json::json!({
         "model": s.model,
-        "temperature": s.temperature,
         "max_tokens": max_tokens,
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
     });
+    if s.temperature > 0.0 {
+        body["temperature"] = serde_json::json!(s.temperature);
+    }
     let url = normalize_url(&s.base_url);
     let mut req = client.post(&url).json(&body);
     if !s.api_key.trim().is_empty() {
@@ -189,6 +191,60 @@ pub fn chat(
             text: String::new(),
             error: e.to_string(),
         },
+    }
+}
+
+pub fn fetch_models(s: &Settings) -> Result<Vec<String>, String> {
+    if s.base_url.trim().is_empty() {
+        return Err("Base URL belum diisi".into());
+    }
+    let client = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(15))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let b = s.base_url.trim().trim_end_matches('/');
+    let url = if b.ends_with("/chat/completions") {
+        b.replace("/chat/completions", "/models")
+    } else if b.ends_with("/v1") {
+        format!("{b}/models")
+    } else {
+        format!("{b}/v1/models")
+    };
+
+    let mut req = client.get(&url);
+    if !s.api_key.trim().is_empty() {
+        req = req.header("Authorization", format!("Bearer {}", s.api_key.trim()));
+    }
+
+    let resp = req.send().map_err(|e| e.to_string())?;
+    if !resp.status().is_success() {
+        return Err(format!("HTTP {}: gagal mengambil daftar model", resp.status()));
+    }
+
+    let text = resp.text().unwrap_or_default();
+    let v: Value = serde_json::from_str(&text).map_err(|e| format!("JSON tidak valid: {e}"))?;
+
+    let mut models = Vec::new();
+    if let Some(data) = v.get("data").and_then(|d| d.as_array()) {
+        for m in data {
+            if let Some(id) = m.get("id").and_then(|i| i.as_str()) {
+                models.push(id.to_string());
+            }
+        }
+    } else if let Some(arr) = v.as_array() {
+        for m in arr {
+            if let Some(id) = m.get("id").and_then(|i| i.as_str()) {
+                models.push(id.to_string());
+            }
+        }
+    }
+
+    if models.is_empty() {
+        Err("Tidak ada model ditemukan di endpoint".into())
+    } else {
+        models.sort();
+        Ok(models)
     }
 }
 

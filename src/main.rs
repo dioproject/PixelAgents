@@ -35,7 +35,9 @@ struct App {
     settings: llm::Settings,
     show_settings: bool,
     test_result: Option<Result<String, String>>,
-    testing_connection: bool,
+    available_models: Vec<String>,
+    fetching_models: bool,
+    models_error: Option<String>,
     // Modal Titah Direksi & Proyek
     show_directive: bool,
     directive_input: String,
@@ -77,7 +79,9 @@ impl App {
             settings,
             show_settings: false,
             test_result: None,
-            testing_connection: false,
+            available_models: Vec::new(),
+            fetching_models: false,
+            models_error: None,
             show_directive: false,
             directive_input: String::new(),
             show_archive: false,
@@ -343,51 +347,122 @@ impl eframe::App for App {
             egui::Window::new("⚙️ Konfigurasi LLM / AI Studio")
                 .collapsible(false)
                 .resizable(false)
-                .default_width(460.0)
+                .default_width(520.0)
                 .show(ui.ctx(), |ui| {
                     ui.label(
-                        egui::RichText::new("Masukkan endpoint OpenAI-compatible apa pun (9router, OpenRouter, Groq, Ollama, OpenAI).")
+                        egui::RichText::new("Masukkan endpoint OpenAI-compatible apa pun (OpenRouter, Groq, 9router, Ollama, OpenAI).")
                             .font(theme::body(12.0))
                             .color(theme::TEXT_DIM),
                     );
                     ui.add_space(8.0);
 
+                    // Base URL dengan tombol Paste
                     ui.horizontal(|ui| {
                         ui.label("Base URL:");
-                        ui.text_edit_singleline(&mut self.settings.base_url);
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.settings.base_url)
+                                .desired_width(320.0)
+                                .hint_text("https://openrouter.ai/api/v1"),
+                        );
+                        if ui.button("📋 Paste").clicked() {
+                            let text = ui.input(|i| {
+                                i.events
+                                    .iter()
+                                    .find_map(|e| {
+                                        if let egui::Event::Paste(t) = e {
+                                            Some(t.clone())
+                                        } else {
+                                            None
+                                        }
+                                    })
+                            });
+                            // Fallback jika tidak ada event paste saat klik tombol, coba minta ctx copy
+                            if let Some(t) = text {
+                                self.settings.base_url = t.trim().to_string();
+                            }
+                        }
                     });
                     ui.label(
-                        egui::RichText::new("Contoh: https://openrouter.ai/api/v1 atau http://localhost:11434/v1")
+                        egui::RichText::new("Tips: Bisa tekan Ctrl+V saat cursor ada di dalam box.")
                             .font(theme::body(11.0))
                             .color(theme::TEXT_FAINT),
                     );
 
+                    ui.add_space(4.0);
+
+                    // API Key dengan tombol Paste
                     ui.horizontal(|ui| {
                         ui.label("API Key: ");
-                        ui.add(egui::TextEdit::singleline(&mut self.settings.api_key).password(true));
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.settings.api_key)
+                                .password(true)
+                                .desired_width(320.0)
+                                .hint_text("sk-...")
+                        );
                     });
 
+                    ui.add_space(4.0);
+
+                    // Model + Auto Import Dropdown
                     ui.horizontal(|ui| {
                         ui.label("Model:   ");
-                        ui.text_edit_singleline(&mut self.settings.model);
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.settings.model)
+                                .desired_width(200.0)
+                                .hint_text("Pilih atau ketik model"),
+                        );
+
+                        if ui.button("🔄 Ambil Model dari Provider").clicked() {
+                            self.fetching_models = true;
+                            match llm::fetch_models(&self.settings) {
+                                Ok(m) => {
+                                    self.available_models = m;
+                                    self.models_error = None;
+                                    if !self.available_models.is_empty() && self.settings.model.trim().is_empty() {
+                                        self.settings.model = self.available_models[0].clone();
+                                    }
+                                }
+                                Err(e) => {
+                                    self.models_error = Some(e);
+                                }
+                            }
+                            self.fetching_models = false;
+                        }
                     });
 
-                    ui.horizontal(|ui| {
-                        ui.label("Temperature:");
-                        ui.add(egui::Slider::new(&mut self.settings.temperature, 0.0..=1.5).step_by(0.05));
-                    });
+                    // Dropdown pilihan model jika sudah di-fetch
+                    if !self.available_models.is_empty() {
+                        ui.horizontal(|ui| {
+                            ui.label("Pilih Model:");
+                            egui::ComboBox::from_id_salt("model_dropdown")
+                                .selected_text(&self.settings.model)
+                                .width(320.0)
+                                .show_ui(ui, |ui| {
+                                    for m in &self.available_models {
+                                        ui.selectable_value(&mut self.settings.model, m.clone(), m);
+                                    }
+                                });
+                        });
+                    }
 
+                    if let Some(err) = &self.models_error {
+                        ui.label(
+                            egui::RichText::new(format!("⚠️ Gagal ambil model: {err}"))
+                                .font(theme::body(11.0))
+                                .color(theme::DANGER),
+                        );
+                    }
+
+                    ui.add_space(4.0);
                     ui.checkbox(&mut self.settings.offline, "Mode Offline (Paksa template prosedural)");
 
                     ui.separator();
                     ui.horizontal(|ui| {
                         if ui.button("🧪 Test Koneksi").clicked() {
-                            self.testing_connection = true;
                             self.test_result = Some(llm::test_connection(&self.settings));
-                            self.testing_connection = false;
                         }
 
-                        if ui.button("💾 Simpan Pengaturan").clicked() {
+                        if ui.button(egui::RichText::new("💾 Simpan Pengaturan").color(theme::SUCCESS)).clicked() {
                             let _ = llm::save(&self.settings);
                             self.show_settings = false;
                         }
