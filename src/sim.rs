@@ -507,6 +507,16 @@ impl Sim {
             late: false,
         });
         self.roll_night_crew();
+        // Langsung panggil seluruh agen yang ada di luar kantor untuk segera masuk berjalan dari entrance
+        for a in self.agents.iter_mut() {
+            a.plan_key.clear();
+            if !a.present {
+                a.present = true;
+                a.pos = (ENTRANCE.0 as f32 + 0.5, ENTRANCE.1 as f32 + 0.5);
+                a.path.clear();
+                a.path_i = 0;
+            }
+        }
         self.push_feed("proyek", &format!("📋 PROYEK BARU: {title}"));
         self.push_feed(
             "proyek",
@@ -1046,6 +1056,12 @@ impl Sim {
         );
         for a in self.agents.iter_mut() {
             a.plan_key.clear();
+            if !a.present {
+                a.present = true;
+                a.pos = (ENTRANCE.0 as f32 + 0.5, ENTRANCE.1 as f32 + 0.5);
+                a.path.clear();
+                a.path_i = 0;
+            }
         }
     }
 
@@ -1057,6 +1073,13 @@ impl Sim {
             "🌙 LEMBUR MALAM INI. Semua divisi tetap bekerja.",
         );
         for a in self.agents.iter_mut() {
+            a.plan_key.clear();
+            if !a.present {
+                a.present = true;
+                a.pos = (ENTRANCE.0 as f32 + 0.5, ENTRANCE.1 as f32 + 0.5);
+                a.path.clear();
+                a.path_i = 0;
+            }
             a.stress = (a.stress + 8.0).min(100.0);
         }
     }
@@ -1090,6 +1113,17 @@ impl Sim {
         self.stats.directives += 1;
         self.push_feed("direksi", &format!("📢 TITAH DIREKSI: \"{text}\""));
 
+        // Pastikan agen hadir bila dipanggil titah
+        for a in self.agents.iter_mut() {
+            if !a.present {
+                a.present = true;
+                a.pos = (ENTRANCE.0 as f32 + 0.5, ENTRANCE.1 as f32 + 0.5);
+                a.plan_key.clear();
+                a.path.clear();
+                a.path_i = 0;
+            }
+        }
+
         // Cari 2-3 agen yang hadir untuk merespons formal ke Direktur
         let present = self.present_agents();
         let mut rng = rand::thread_rng();
@@ -1102,7 +1136,7 @@ impl Sim {
 
         let mut count = 0;
         for &idx in present.iter() {
-            if count >= 2 {
+            if count >= 3 {
                 break;
             }
             use rand::seq::SliceRandom;
