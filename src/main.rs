@@ -19,6 +19,14 @@ use sim::Sim;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+fn get_clipboard_text() -> Option<String> {
+    arboard::Clipboard::new()
+        .ok()
+        .and_then(|mut cb| cb.get_text().ok())
+        .map(|t| t.trim().to_string())
+        .filter(|t| !t.is_empty())
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum FeedFilter {
     All,
@@ -366,25 +374,13 @@ impl eframe::App for App {
                                 .hint_text("https://openrouter.ai/api/v1"),
                         );
                         if ui.button("📋 Paste").clicked() {
-                            let text = ui.input(|i| {
-                                i.events
-                                    .iter()
-                                    .find_map(|e| {
-                                        if let egui::Event::Paste(t) = e {
-                                            Some(t.clone())
-                                        } else {
-                                            None
-                                        }
-                                    })
-                            });
-                            // Fallback jika tidak ada event paste saat klik tombol, coba minta ctx copy
-                            if let Some(t) = text {
-                                self.settings.base_url = t.trim().to_string();
+                            if let Some(clip) = get_clipboard_text() {
+                                self.settings.base_url = clip;
                             }
                         }
                     });
                     ui.label(
-                        egui::RichText::new("Tips: Bisa tekan Ctrl+V saat cursor ada di dalam box.")
+                        egui::RichText::new("Tips: Klik tombol 📋 Paste atau tekan Ctrl+V saat cursor ada di box.")
                             .font(theme::body(11.0))
                             .color(theme::TEXT_FAINT),
                     );
@@ -400,6 +396,11 @@ impl eframe::App for App {
                                 .desired_width(320.0)
                                 .hint_text("sk-...")
                         );
+                        if ui.button("📋 Paste").clicked() {
+                            if let Some(clip) = get_clipboard_text() {
+                                self.settings.api_key = clip;
+                            }
+                        }
                     });
 
                     ui.add_space(4.0);
@@ -543,6 +544,20 @@ impl eframe::App for App {
                             .desired_rows(4)
                             .desired_width(f32::INFINITY),
                     );
+
+                    ui.horizontal(|ui| {
+                        if ui.button("📋 Paste dari Clipboard").clicked() {
+                            if let Some(clip) = get_clipboard_text() {
+                                if !self.directive_input.is_empty() {
+                                    self.directive_input.push(' ');
+                                }
+                                self.directive_input.push_str(&clip);
+                            }
+                        }
+                        if ui.button("Bersihkan").clicked() {
+                            self.directive_input.clear();
+                        }
+                    });
 
                     ui.add_space(4.0);
                     ui.horizontal(|ui| {
