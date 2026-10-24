@@ -1,5 +1,6 @@
 // Pixel Sinergi — Cozy AI Agent Studio (native Rust)
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![allow(dead_code, unused_variables, unused_imports, unused_mut, unused_assignments)]
 
 mod data;
 mod deliver;
