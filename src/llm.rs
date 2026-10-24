@@ -83,14 +83,45 @@ pub fn is_ready(s: &Settings) -> bool {
     !s.offline && !s.base_url.trim().is_empty() && !s.model.trim().is_empty()
 }
 
-fn normalize_url(base: &str) -> String {
+fn normalize_chat_url(base: &str) -> String {
     let b = base.trim().trim_end_matches('/');
-    if b.ends_with("/chat/completions") {
+    if b.contains("generativelanguage.googleapis.com") {
+        if b.ends_with("/chat/completions") {
+            b.to_string()
+        } else if b.ends_with("/v1beta/openai") {
+            format!("{b}/chat/completions")
+        } else if b.ends_with("/v1beta") {
+            format!("{b}/openai/chat/completions")
+        } else {
+            format!("{b}/v1beta/openai/chat/completions")
+        }
+    } else if b.ends_with("/chat/completions") {
         b.to_string()
     } else if b.ends_with("/v1") {
         format!("{b}/chat/completions")
     } else {
         format!("{b}/v1/chat/completions")
+    }
+}
+
+fn normalize_models_url(base: &str) -> String {
+    let b = base.trim().trim_end_matches('/');
+    if b.contains("generativelanguage.googleapis.com") {
+        if b.ends_with("/chat/completions") {
+            b.replace("/chat/completions", "/models")
+        } else if b.ends_with("/v1beta/openai") {
+            format!("{b}/models")
+        } else if b.ends_with("/v1beta") {
+            format!("{b}/openai/models")
+        } else {
+            format!("{b}/v1beta/openai/models")
+        }
+    } else if b.ends_with("/chat/completions") {
+        b.replace("/chat/completions", "/models")
+    } else if b.ends_with("/v1") {
+        format!("{b}/models")
+    } else {
+        format!("{b}/v1/models")
     }
 }
 
@@ -139,7 +170,7 @@ pub fn chat(
     if s.temperature > 0.0 {
         body["temperature"] = serde_json::json!(s.temperature);
     }
-    let url = normalize_url(&s.base_url);
+    let url = normalize_chat_url(&s.base_url);
     let mut req = client.post(&url).json(&body);
     if !s.api_key.trim().is_empty() {
         req = req.header("Authorization", format!("Bearer {}", s.api_key.trim()));
@@ -203,14 +234,7 @@ pub fn fetch_models(s: &Settings) -> Result<Vec<String>, String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    let b = s.base_url.trim().trim_end_matches('/');
-    let url = if b.ends_with("/chat/completions") {
-        b.replace("/chat/completions", "/models")
-    } else if b.ends_with("/v1") {
-        format!("{b}/models")
-    } else {
-        format!("{b}/v1/models")
-    };
+    let url = normalize_models_url(&s.base_url);
 
     let mut req = client.get(&url);
     if !s.api_key.trim().is_empty() {
@@ -594,16 +618,24 @@ mod tests {
     #[test]
     fn url_normalize() {
         assert_eq!(
-            normalize_url("http://x:1/v1"),
+            normalize_chat_url("http://x:1/v1"),
             "http://x:1/v1/chat/completions"
         );
         assert_eq!(
-            normalize_url("http://x:1"),
+            normalize_chat_url("http://x:1"),
             "http://x:1/v1/chat/completions"
         );
         assert_eq!(
-            normalize_url("http://x:1/v1/chat/completions"),
+            normalize_chat_url("http://x:1/v1/chat/completions"),
             "http://x:1/v1/chat/completions"
+        );
+        assert_eq!(
+            normalize_chat_url("https://generativelanguage.googleapis.com/v1beta/openai"),
+            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        );
+        assert_eq!(
+            normalize_models_url("https://generativelanguage.googleapis.com/v1beta/openai"),
+            "https://generativelanguage.googleapis.com/v1beta/openai/models"
         );
     }
 

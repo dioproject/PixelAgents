@@ -359,11 +359,32 @@ impl eframe::App for App {
                 .default_width(520.0)
                 .show(ui.ctx(), |ui| {
                     ui.label(
-                        egui::RichText::new("Masukkan endpoint OpenAI-compatible apa pun (OpenRouter, Groq, 9router, Ollama, OpenAI).")
+                        egui::RichText::new("Masukkan endpoint OpenAI-compatible apa pun (Gemini, OpenRouter, Groq, 9router, Ollama, OpenAI).")
                             .font(theme::body(12.0))
                             .color(theme::TEXT_DIM),
                     );
-                    ui.add_space(8.0);
+
+                    // Preset provider shortcut
+                    ui.horizontal(|ui| {
+                        ui.label(egui::RichText::new("Preset Cepat:").font(theme::body(11.0)).color(theme::ACCENT_2));
+                        if ui.button("Gemini AI").clicked() {
+                            self.settings.base_url = "https://generativelanguage.googleapis.com/v1beta/openai".into();
+                            self.settings.model = "gemini-1.5-flash".into();
+                        }
+                        if ui.button("OpenRouter").clicked() {
+                            self.settings.base_url = "https://openrouter.ai/api/v1".into();
+                            self.settings.model = "google/gemini-2.0-flash-exp:free".into();
+                        }
+                        if ui.button("Groq").clicked() {
+                            self.settings.base_url = "https://api.groq.com/openai/v1".into();
+                            self.settings.model = "llama-3.3-70b-versatile".into();
+                        }
+                        if ui.button("Ollama (Lokal)").clicked() {
+                            self.settings.base_url = "http://localhost:11434/v1".into();
+                            self.settings.model = "llama3.2".into();
+                        }
+                    });
+                    ui.add_space(4.0);
 
                     // Base URL dengan tombol Paste
                     ui.horizontal(|ui| {
