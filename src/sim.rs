@@ -1082,6 +1082,39 @@ impl Sim {
         );
     }
 
+    pub fn directive_custom(&mut self, text: &str) {
+        let text = text.trim();
+        if text.is_empty() {
+            return;
+        }
+        self.stats.directives += 1;
+        self.push_feed("direksi", &format!("📢 TITAH DIREKSI: \"{text}\""));
+
+        // Cari 2-3 agen yang hadir untuk merespons formal ke Direktur
+        let present = self.present_agents();
+        let mut rng = rand::thread_rng();
+        let responses = [
+            "Baik Pak Direktur, segera kami tindak lanjuti.",
+            "Siap Pak, tim kami langsung eksekusi arahan ini.",
+            "Dicatat Pak. Kami koordinasikan lintas divisi.",
+            "Siap laksanakan, Pak. Segera kami laporkan progresnya.",
+        ];
+
+        let mut count = 0;
+        for &idx in present.iter() {
+            if count >= 2 {
+                break;
+            }
+            use rand::seq::SliceRandom;
+            if let Some(&resp) = responses.choose(&mut rng) {
+                let agent_name = self.agents[idx].name();
+                self.say(idx, resp, 6.0);
+                self.push_feed("direksi", &format!("{}: \"{}\"", agent_name, resp));
+                count += 1;
+            }
+        }
+    }
+
     pub fn set_preview(&mut self, h: Option<f32>) {
         self.preview_hour = h;
         if let Some(v) = h {
